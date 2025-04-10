@@ -1,9 +1,16 @@
 import 'package:chewata/model/helper_functions.dart';
+import 'package:chewata/screen/widgets/onboarding_dot_navigation.dart';
+import 'package:chewata/screen/widgets/onboarding_page.dart';
+import 'package:chewata/screen/widgets/onboarding_skip.dart';
+import 'package:chewata/utils/constants/color.dart';
 import 'package:chewata/utils/constants/image_strings.dart';
 import 'package:chewata/utils/constants/sizes.dart';
 import 'package:chewata/utils/constants/text_strings.dart';
+import 'package:chewata/utils/device/device_utility.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:iconsax/iconsax.dart';
 
 class OnBoardingScreen extends StatelessWidget {
   const OnBoardingScreen({super.key});
@@ -11,8 +18,6 @@ class OnBoardingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Get theme-aware text colors
-    final textColor = Theme.of(context).brightness == Brightness.dark ? 
-                       Colors.white : Colors.black;
                        
     return Scaffold(
       body: SafeArea(
@@ -41,35 +46,13 @@ class OnBoardingScreen extends StatelessWidget {
             ),
             
             // Skip button with better visibility
-            Positioned(
-              top: 10.0, // Fixed positioning from the top
-              right: Tsize.defaultSpace, 
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: TextButton(
-                  onPressed: () {
-                    // Your navigation logic here
-                  },
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: Text(
-                    'Skip',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            const onBoardingSkip(),
+
+            //smoth page indicator
+            onBordingDotNavigation(),
+
+            //floating button
+            onBoardingNextButton()
           ],
         ),
       ),
@@ -77,53 +60,24 @@ class OnBoardingScreen extends StatelessWidget {
   }
 }
 
-class OnBoardingPage extends StatelessWidget {
-  const OnBoardingPage({
-    super.key, 
-    required this.image, 
-    required this.title, 
-    required this.subTitle,
+class onBoardingNextButton extends StatelessWidget {
+  const onBoardingNextButton({
+    super.key,
   });
-
-  final String image, title, subTitle;
 
   @override
   Widget build(BuildContext context) {
-    // Get dimensions based on the current context
-    final Size size = MediaQuery.of(context).size;
-    final double screenWidth = size.width;
-    final double screenHeight = size.height;
-    
-    return Padding(
-      padding: const EdgeInsets.all(Tsize.defaultSpace),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(height: screenHeight * 0.05), // Offset for the skip button
-          Lottie.asset(
-            image,
-            width: screenWidth * 0.8,
-            height: screenHeight * 0.5,
-            fit: BoxFit.contain,
-            frameRate: FrameRate.max,
-          ),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: Tsize.spaceBtwItems),
-          Text(
-            subTitle,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
+    final dark= THelperFunction.isDarkMode(context);
+    return Positioned(
+      right: Tsize.defaultSpace,
+      bottom: TDeviceUtils.getBottomNavigationBarHeight(),
+      child: ElevatedButton(
+        onPressed: () {}, 
+        style: ElevatedButton.styleFrom(
+          shape: const CircleBorder(),
+          backgroundColor: dark? TColor.light: TColor.primary,
+        ),
+        child: const Icon(Iconsax.arrow_right_3,),
+      ));
   }
 }
