@@ -1,4 +1,5 @@
 
+import 'package:chewata/controller/onboarding_controller.dart';
 import 'package:chewata/utils/constants/sizes.dart';
 import 'package:chewata/utils/device/device_utility.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +18,8 @@ class onBoardingSkip extends StatelessWidget {
        
         child: TextButton(
           onPressed: () {
-            // Your navigation logic here
+            OnBoardingController.instance.skipPage();
+
           },
         
           child: Text(

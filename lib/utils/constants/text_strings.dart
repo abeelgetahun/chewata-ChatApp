@@ -6,13 +6,13 @@ class TText{
   static const String appName = 'Chewata';
 
   //onboarding texts
-  static const String onBoardingTitle1 = 'Welcome to chewata';
-  static const String onBoardingTitle2 = 'descover your friends';
-  static const String onBoardingTitle3 = 'Explore the World';
+  static const String onBoardingTitle1 = 'Chat Instantly, Anywhere';
+  static const String onBoardingTitle2 = 'Stay Anonymous or Go Public';
+  static const String onBoardingTitle3 = 'Smart Matching, Fun Conversations';
 
-  static const String onBoardingSubTitle1 = 'Discover the power of Flutter for building beautiful apps.';
-  static const String onBoardingSubTitle2 = 'Create stunning user interfaces with ease.';
-  static const String onBoardingSubTitle3 = 'Join the Flutter community and start your journey today!';
+  static const String onBoardingSubTitle1 = 'Connect with friends or strangers in real time. Smooth, fast, and private.';
+  static const String onBoardingSubTitle2 = 'Choose how you chat — stay incognito or reveal yourself when you are ready.';
+  static const String onBoardingSubTitle3 = 'Get matched with interesting people based on your preferences and vibe.';
 
    
 }

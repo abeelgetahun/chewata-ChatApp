@@ -1,5 +1,7 @@
+import 'package:chewata/controller/onboarding_controller.dart';
 import 'package:chewata/model/helper_functions.dart';
 import 'package:chewata/screen/widgets/onboarding_dot_navigation.dart';
+import 'package:chewata/screen/widgets/onboarding_next_button.dart';
 import 'package:chewata/screen/widgets/onboarding_page.dart';
 import 'package:chewata/screen/widgets/onboarding_skip.dart';
 import 'package:chewata/utils/constants/color.dart';
@@ -8,6 +10,7 @@ import 'package:chewata/utils/constants/sizes.dart';
 import 'package:chewata/utils/constants/text_strings.dart';
 import 'package:chewata/utils/device/device_utility.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:iconsax/iconsax.dart';
@@ -18,14 +21,15 @@ class OnBoardingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Get theme-aware text colors
+    final controller = Get.put(OnBoardingController());
                        
     return Scaffold(
-      body: SafeArea(
-        child: Stack(
+      body:Stack(
           children: [
             // Horizontal scrollable
             PageView(
-              physics: const BouncingScrollPhysics(),
+              controller: controller.pageController,
+              onPageChanged: controller.updatePageIndicator,
               children: const [
                 OnBoardingPage(
                   image: TImages.onBoardingImage1,
@@ -55,29 +59,6 @@ class OnBoardingScreen extends StatelessWidget {
             onBoardingNextButton()
           ],
         ),
-      ),
-    );
-  }
-}
-
-class onBoardingNextButton extends StatelessWidget {
-  const onBoardingNextButton({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final dark= THelperFunction.isDarkMode(context);
-    return Positioned(
-      right: Tsize.defaultSpace,
-      bottom: TDeviceUtils.getBottomNavigationBarHeight(),
-      child: ElevatedButton(
-        onPressed: () {}, 
-        style: ElevatedButton.styleFrom(
-          shape: const CircleBorder(),
-          backgroundColor: dark? TColor.light: TColor.primary,
-        ),
-        child: const Icon(Iconsax.arrow_right_3,),
-      ));
+      );
   }
 }

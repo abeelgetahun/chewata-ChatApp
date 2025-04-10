@@ -1,3 +1,4 @@
+import 'package:chewata/controller/onboarding_controller.dart';
 import 'package:chewata/model/helper_functions.dart';
 import 'package:chewata/utils/constants/color.dart';
 import 'package:chewata/utils/constants/sizes.dart';
@@ -14,13 +15,15 @@ class onBordingDotNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     
+    final controller = OnBoardingController.instance;
     final dark= THelperFunction.isDarkMode(context);
     return Positioned(
       bottom: TDeviceUtils.getBottomNavigationBarHeight()+25,
       left: Tsize.defaultSpace ,
       child: SmoothPageIndicator(
-        controller: PageController(), 
+        controller: controller.pageController, 
         count: 3,
+        onDotClicked: controller.dotNavigationClick,
         effect: ExpandingDotsEffect(
           dotWidth: 10.0,
           dotHeight: 6.0,
