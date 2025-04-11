@@ -36,7 +36,8 @@ class OnBoardingPage extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary
+              color: Theme.of(context).colorScheme.primary,
+              fontFamily: 'WinkySans',
             ),
             textAlign: TextAlign.center,
           ),
@@ -44,7 +45,8 @@ class OnBoardingPage extends StatelessWidget {
           Text(
             subTitle,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontFamily: 'WinkySans'
             ),
             textAlign: TextAlign.center,
           ),
