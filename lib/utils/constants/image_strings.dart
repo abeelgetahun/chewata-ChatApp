@@ -7,5 +7,6 @@ class TImages{
   static const String onBoardingImage3 = 'assets/images/on_boarding_images/page_3.json';
 
   //login 
-  static const String login_background = 'assets/images/auth_images/login_background.jpg'; // Replace with the correct path to your image
+  static const String login_background = "assets/images/auth_images/login_background.jpg"; // Replace with the correct path to your image
+  
 }
