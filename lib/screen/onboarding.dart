@@ -1,20 +1,12 @@
 import 'package:chewata/controller/onboarding_controller.dart';
-import 'package:chewata/model/helper_functions.dart';
 import 'package:chewata/screen/widgets/onboarding_dot_navigation.dart';
 import 'package:chewata/screen/widgets/onboarding_next_button.dart';
 import 'package:chewata/screen/widgets/onboarding_page.dart';
 import 'package:chewata/screen/widgets/onboarding_skip.dart';
-import 'package:chewata/utils/constants/color.dart';
 import 'package:chewata/utils/constants/image_strings.dart';
-import 'package:chewata/utils/constants/sizes.dart';
 import 'package:chewata/utils/constants/text_strings.dart';
-import 'package:chewata/utils/device/device_utility.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lottie/lottie.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import 'package:iconsax/iconsax.dart';
-
 class OnBoardingScreen extends StatelessWidget {
   const OnBoardingScreen({super.key});
 

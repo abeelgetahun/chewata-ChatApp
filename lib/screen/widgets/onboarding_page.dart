@@ -1,4 +1,3 @@
-
 import 'package:chewata/utils/constants/sizes.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
@@ -21,7 +20,7 @@ class OnBoardingPage extends StatelessWidget {
     final double screenHeight = size.height;
     
     return Padding(
-      padding: const EdgeInsets.all(Tsize.defaultSpace),
+      padding: const EdgeInsets.all(TSize.defaultSpace),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -41,7 +40,7 @@ class OnBoardingPage extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: Tsize.spaceBtwItems),
+          const SizedBox(height: TSize.spaceBtwItems),
           Text(
             subTitle,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(

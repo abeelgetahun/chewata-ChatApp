@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import 'package:chewata/screen/login_screen.dart';
 
 class OnBoardingController extends GetxController{
   static OnBoardingController get instance => Get.find();
@@ -22,7 +23,7 @@ class OnBoardingController extends GetxController{
   ///update current index & jump to next page
   void nextPage(){
     if (currentIndex.value==2){
-      //get.to (loginScreen());
+      Get.to(() => const LoginScreen());
     }else{
       currentIndex.value += 1; // Increment the current index
       pageController.animateToPage(
