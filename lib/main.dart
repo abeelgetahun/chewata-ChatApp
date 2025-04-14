@@ -1,9 +1,7 @@
 import 'package:chewata/app.dart';
 import 'package:flutter/material.dart';
 
-Future<void> main() async {
-
+void main() {
   runApp(const App());
-  
-
+  //firebase
 }
