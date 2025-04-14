@@ -1,7 +1,6 @@
+import 'package:chewata/screen/auth/auth_screen.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:chewata/screen/auth/login_screen.dart';
-
 class OnBoardingController extends GetxController{
   static OnBoardingController get instance => Get.find();
 
@@ -24,7 +23,7 @@ class OnBoardingController extends GetxController{
   void nextPage(){
     if (currentIndex.value == 2) {
       // Navigate to LoginScreen and remove OnBoardingScreen from the stack
-      Get.off(() => const LoginScreen());
+      Get.off(() => const AuthScreen());
     } else {
       currentIndex.value += 1; // Increment the current index
       pageController.animateToPage(
