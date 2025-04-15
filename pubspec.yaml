@@ -68,6 +68,7 @@ flutter:
   assets:
      - assets/images/on_boarding_images/
      - assets/images/auth_images/login_background.jpg
+     - .env
      
   #   - images/a_dot_ham.jpeg
 
