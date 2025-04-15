@@ -47,6 +47,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-
 # Firebase configuration file
 android/app/google-services.json
