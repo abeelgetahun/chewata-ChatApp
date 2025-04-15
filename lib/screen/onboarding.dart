@@ -7,51 +7,56 @@ import 'package:chewata/utils/constants/image_strings.dart';
 import 'package:chewata/utils/constants/text_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 class OnBoardingScreen extends StatelessWidget {
   const OnBoardingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Get theme-aware text colors
+    // Preload the login background image
+    precacheImage(
+      const AssetImage("assets/images/auth_images/login_background.jpg"),
+      context,
+    );
+
     final controller = Get.put(OnBoardingController());
-                       
+
     return Scaffold(
-      body:Stack(
-          children: [
-            // Horizontal scrollable
-            PageView(
-              controller: controller.pageController,
-              onPageChanged: controller.updatePageIndicator,
-              children: const [
-                OnBoardingPage(
-                  image: TImages.onBoardingImage1,
-                  title: TText.onBoardingTitle1,
-                  subTitle: TText.onBoardingSubTitle1
-                
-                ), 
-                OnBoardingPage(
-                  image: TImages.onBoardingImage2,
-                  title: TText.onBoardingTitle2,
-                  subTitle: TText.onBoardingSubTitle2
-                ),
-                OnBoardingPage(
-                  image: TImages.onBoardingImage3,
-                  title: TText.onBoardingTitle3,
-                  subTitle: TText.onBoardingSubTitle3
-                ), 
-              ],
-            ),
-            
-            // Skip button with better visibility
-            const onBoardingSkip(),
+      body: Stack(
+        children: [
+          // Horizontal scrollable
+          PageView(
+            controller: controller.pageController,
+            onPageChanged: controller.updatePageIndicator,
+            children: const [
+              OnBoardingPage(
+                image: TImages.onBoardingImage1,
+                title: TText.onBoardingTitle1,
+                subTitle: TText.onBoardingSubTitle1,
+              ),
+              OnBoardingPage(
+                image: TImages.onBoardingImage2,
+                title: TText.onBoardingTitle2,
+                subTitle: TText.onBoardingSubTitle2,
+              ),
+              OnBoardingPage(
+                image: TImages.onBoardingImage3,
+                title: TText.onBoardingTitle3,
+                subTitle: TText.onBoardingSubTitle3,
+              ),
+            ],
+          ),
 
-            //smoth page indicator
-            onBordingDotNavigation(),
+          // Skip button with better visibility
+          const onBoardingSkip(),
 
-            //floating button
-            onBoardingNextButton()
-          ],
-        ),
-      );
+          // Smooth page indicator
+          onBordingDotNavigation(),
+
+          // Floating button
+          onBoardingNextButton(),
+        ],
+      ),
+    );
   }
 }
