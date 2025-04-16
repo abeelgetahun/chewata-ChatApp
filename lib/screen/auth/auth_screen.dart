@@ -50,51 +50,49 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
           // Content box with PageView
           Center(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              width: size.width > 600 ? 500 : size.width * 0.9,
-              height: boxHeight, // Dynamic height
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: PageView(
-                      controller: _pageController,
-                      physics: const NeverScrollableScrollPhysics(), // Disable swipe
-                      onPageChanged: (index) {
-                        setState(() {
-                          _currentPage = index;
-                        });
-                      },
-                      children: [
-                        // Login Form
-                        Center(
-                          child: LoginForm(onSwitchToSignUp: () {
+            child: SingleChildScrollView(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                width: size.width > 600 ? 500 : size.width * 0.9,
+                height: boxHeight, // Dynamic height
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: PageView(
+                        controller: _pageController,
+                        physics: const NeverScrollableScrollPhysics(), // Disable swipe
+                        onPageChanged: (index) {
+                          setState(() {
+                            _currentPage = index;
+                          });
+                        },
+                        children: [
+                          // Login Form
+                          LoginForm(onSwitchToSignUp: () {
                             _pageController.animateToPage(
                               1,
                               duration: const Duration(milliseconds: 500),
                               curve: Curves.easeInOut,
                             );
                           }),
-                        ),
-                        // Sign Up Form
-                        Center(
-                          child: SignupForm(onSwitchToLogin: () {
+                          // Sign Up Form
+                          SignupForm(onSwitchToLogin: () {
                             _pageController.animateToPage(
                               0,
                               duration: const Duration(milliseconds: 500),
                               curve: Curves.easeInOut,
                             );
                           }),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
