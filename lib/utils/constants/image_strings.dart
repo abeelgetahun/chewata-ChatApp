@@ -8,5 +8,6 @@ class TImages{
 
   //login 
   static const String login_background = "assets/images/auth_images/login_background.jpg"; // Replace with the correct path to your image
+  static const String login_background_dark = "assets/images/auth_images/login_background_dark.jpg";
   
 }

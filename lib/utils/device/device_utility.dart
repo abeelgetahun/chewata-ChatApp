@@ -1,4 +1,3 @@
-
 import 'dart:core';
 
 import 'package:flutter/foundation.dart';
@@ -32,5 +31,15 @@ class TDeviceUtils{
   static Future<bool> isPhysicalDevice() async {
     return defaultTargetPlatform == TargetPlatform.android || 
            defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
+  static double getDynamicHeight(Size size, {required bool isLogin}) {
+    if (size.width < 600) {
+      // Mobile view
+      return isLogin ? size.height * 0.5 : size.height * 0.7;
+    } else {
+      // Desktop view
+      return isLogin ? size.height * 0.6 : size.height * 0.8;
+    }
   }
 }
