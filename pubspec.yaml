@@ -70,6 +70,7 @@ flutter:
   assets:
      - assets/images/on_boarding_images/
      - assets/images/auth_images/login_background.jpg
+     - assets/images/auth_images/login_background_dark.jpg
      - .env
      
   #   - images/a_dot_ham.jpeg
