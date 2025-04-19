@@ -1,8 +1,8 @@
 import 'package:chewata/controller/onboarding_controller.dart';
-import 'package:chewata/screen/widgets/onboarding_dot_navigation.dart';
-import 'package:chewata/screen/widgets/onboarding_next_button.dart';
-import 'package:chewata/screen/widgets/onboarding_page.dart';
-import 'package:chewata/screen/widgets/onboarding_skip.dart';
+import 'package:chewata/screen/onboarding/widgets/onboarding_dot_navigation.dart';
+import 'package:chewata/screen/onboarding/widgets/onboarding_next_button.dart';
+import 'package:chewata/screen/onboarding/widgets/onboarding_page.dart';
+import 'package:chewata/screen/onboarding/widgets/onboarding_skip.dart';
 import 'package:chewata/utils/constants/image_strings.dart';
 import 'package:chewata/utils/constants/text_strings.dart';
 import 'package:flutter/material.dart';
