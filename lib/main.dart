@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -15,5 +17,18 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const App());
+  // Set up global error handling
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    // Log the error or send it to a monitoring service
+    debugPrint('Flutter Error: ${details.exceptionAsString()}');
+  };
+
+  runZonedGuarded(() {
+    runApp(const App());
+  }, (error, stackTrace) {
+    // Handle uncaught asynchronous errors
+    debugPrint('Uncaught Error: $error');
+    debugPrint('Stack Trace: $stackTrace');
+  });
 }
