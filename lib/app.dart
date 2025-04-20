@@ -1,7 +1,7 @@
 // lib/app.dart
 import 'package:chewata/screen/auth/auth_screen.dart';
 import 'package:chewata/screen/home_screen.dart';
-import 'package:chewata/screen/onboarding.dart';
+import 'package:chewata/screen/onboarding/onboarding.dart';
 import 'package:chewata/services/auth_service.dart';
 import 'package:chewata/utils/theme/app_theme.dart';
 import 'package:flutter/material.dart';
