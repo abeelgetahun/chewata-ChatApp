@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:chewata/services/auth_service.dart';
 
 class LoginForm extends StatefulWidget {
   final VoidCallback onSwitchToSignUp;
@@ -13,7 +11,7 @@ class LoginForm extends StatefulWidget {
 
 class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _isPasswordVisible = false;
@@ -40,15 +38,19 @@ class _LoginFormState extends State<LoginForm> {
             ),
             const SizedBox(height: 24),
             
-            // Username / Phone input field
+            // Email input field
             _buildInputField(
-              controller: _usernameController,
-              label: "Username / Email",
-              icon: Icons.person,
+              controller: _emailController,
+              label: "Email",
+              icon: Icons.email,
               isPassword: false,
+              keyboardType: TextInputType.emailAddress,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Please enter your username or email';
+                  return 'Please enter your email';
+                }
+                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                  return 'Please enter a valid email address';
                 }
                 return null;
               },
@@ -186,24 +188,25 @@ class _LoginFormState extends State<LoginForm> {
       setState(() => _isLoading = true);
       
       try {
-        final success = await AuthService.instance.loginWithEmailAndPassword(
-          _usernameController.text.trim(),
-          _passwordController.text,
-        );
+        // Simulate backend login with delay
+        await Future.delayed(const Duration(seconds: 2));
         
-        if (success) {
-          // Navigate to home screen
-          Get.offAllNamed('/home');
+        // Just navigate to home without actual backend connection
+        // In a real app, you would use a navigation service or GetX
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/home');
         }
       } finally {
-        setState(() => _isLoading = false);
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
   
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
