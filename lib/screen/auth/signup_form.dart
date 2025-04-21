@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:chewata/services/auth_service.dart';
 
 class SignupForm extends StatefulWidget {
   final VoidCallback onSwitchToLogin;
@@ -14,13 +12,15 @@ class SignupForm extends StatefulWidget {
 class _SignupFormState extends State<SignupForm> {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
-  final _usernameController = TextEditingController();
-  final _ageController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _emailController = TextEditingController(); // Added email field
+  final _emailController = TextEditingController();
+  final _birthDateController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  
+  DateTime? _selectedDate;
   bool _isLoading = false;
   bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
   @override
   Widget build(BuildContext context) {
@@ -56,24 +56,7 @@ class _SignupFormState extends State<SignupForm> {
               },
             ),
 
-            // Username input field
-            _buildInputField(
-              controller: _usernameController,
-              label: "Username",
-              icon: Icons.person_outline,
-              isPassword: false,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a username';
-                }
-                if (value.length < 4) {
-                  return 'Username must be at least 4 characters';
-                }
-                return null;
-              },
-            ),
-            
-            // Email input field (new)
+            // Email input field
             _buildInputField(
               controller: _emailController,
               label: "Email",
@@ -84,48 +67,15 @@ class _SignupFormState extends State<SignupForm> {
                 if (value == null || value.isEmpty) {
                   return 'Please enter your email';
                 }
-                if (!GetUtils.isEmail(value)) {
-                  return 'Please enter a valid email';
+                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                  return 'Please enter a valid email address';
                 }
                 return null;
               },
             ),
 
-            // Age input field
-            _buildInputField(
-              controller: _ageController,
-              label: "Age",
-              icon: Icons.calendar_today,
-              isPassword: false,
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your age';
-                }
-                if (int.tryParse(value) == null) {
-                  return 'Please enter a valid age';
-                }
-                if (int.parse(value) < 13) {
-                  return 'You must be at least 13 years old';
-                }
-                return null;
-              },
-            ),
-
-            // Phone input field
-            _buildInputField(
-              controller: _phoneController,
-              label: "Phone",
-              icon: Icons.phone,
-              isPassword: false,
-              keyboardType: TextInputType.phone,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your phone number';
-                }
-                return null;
-              },
-            ),
+            // Birth Date input field
+            _buildBirthDateField(),
 
             // Password input field
             _buildInputField(
@@ -150,6 +100,34 @@ class _SignupFormState extends State<SignupForm> {
                 onPressed: () {
                   setState(() {
                     _isPasswordVisible = !_isPasswordVisible;
+                  });
+                },
+              ),
+            ),
+
+            // Confirm Password input field
+            _buildInputField(
+              controller: _confirmPasswordController,
+              label: "Confirm Password",
+              icon: Icons.lock_outline,
+              isPassword: !_isConfirmPasswordVisible,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please confirm your password';
+                }
+                if (value != _passwordController.text) {
+                  return 'Passwords do not match';
+                }
+                return null;
+              },
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                  color: Colors.white70,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
                   });
                 },
               ),
@@ -257,26 +235,93 @@ class _SignupFormState extends State<SignupForm> {
     );
   }
 
+  Widget _buildBirthDateField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextFormField(
+        controller: _birthDateController,
+        readOnly: true,
+        onTap: () => _selectDate(context),
+        style: const TextStyle(color: Colors.white),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please select your birth date';
+          }
+          return null;
+        },
+        decoration: InputDecoration(
+          labelText: "Birth Date",
+          labelStyle: const TextStyle(
+            color: Colors.white70,
+            fontWeight: FontWeight.normal,
+          ),
+          floatingLabelBehavior: FloatingLabelBehavior.auto,
+          prefixIcon: const Icon(Icons.calendar_today, color: Colors.white),
+          enabledBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: Colors.white70),
+          ),
+          focusedBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: Colors.white, width: 2),
+          ),
+          errorBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: Colors.redAccent),
+          ),
+          focusedErrorBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: Colors.redAccent, width: 2),
+          ),
+          errorStyle: const TextStyle(color: Colors.redAccent),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Colors.deepPurple,
+              onPrimary: Colors.white,
+              surface: Color(0xFF303030),
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+        _birthDateController.text =
+            "${picked.day}/${picked.month}/${picked.year}";
+      });
+    }
+  }
+
   Future<void> _handleSignup() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
+
       try {
-        final success = await AuthService.instance.registerWithEmailAndPassword(
-          _emailController.text.trim(),
-          _passwordController.text,
-          _fullNameController.text.trim(), 
-          _usernameController.text.trim(),
-          int.parse(_ageController.text.trim()),
-          _phoneController.text.trim(),
-        );
+        // Simulate backend registration with delay
+        await Future.delayed(const Duration(seconds: 2));
         
-        if (success) {
-          // Navigate to home screen
-          Get.offAllNamed('/home');
+        // Just navigate to home without actual backend connection
+        // In a real app, you would use a navigation service or GetX
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/home');
         }
       } finally {
-        setState(() => _isLoading = false);
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
@@ -284,11 +329,10 @@ class _SignupFormState extends State<SignupForm> {
   @override
   void dispose() {
     _fullNameController.dispose();
-    _usernameController.dispose();
-    _ageController.dispose();
-    _phoneController.dispose();
     _emailController.dispose();
+    _birthDateController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 }
