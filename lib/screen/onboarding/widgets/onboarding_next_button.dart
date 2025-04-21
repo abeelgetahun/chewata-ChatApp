@@ -1,5 +1,5 @@
 import 'package:chewata/controller/onboarding_controller.dart';
-import 'package:chewata/model/helper_functions.dart';
+import 'package:chewata/models/helper_functions.dart';
 import 'package:chewata/utils/constants/color.dart';
 import 'package:chewata/utils/constants/sizes.dart';
 import 'package:chewata/utils/device/device_utility.dart';
