@@ -3,6 +3,8 @@ import 'package:chewata/screen/auth/login_form.dart';
 import 'package:chewata/screen/auth/signup_form.dart';
 import 'package:chewata/screen/auth/widgets/auth_background.dart';
 import 'package:chewata/screen/auth/widgets/auth_box.dart';
+import 'package:chewata/controller/auth_controller.dart';
+import 'package:get/get.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
@@ -13,8 +15,16 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool _showLogin = true;
+  final AuthController _authController = Get.find<AuthController>();
 
   void _toggleView() {
+    // Clear form data when switching between login and signup
+    if (_showLogin) {
+      _authController.clearSignupForm();
+    } else {
+      _authController.clearLoginForm();
+    }
+    
     setState(() {
       _showLogin = !_showLogin;
     });
@@ -83,5 +93,12 @@ class _AuthScreenState extends State<AuthScreen> {
         ],
       ),
     );
+  }
+  
+  @override
+  void dispose() {
+    // Ensure we clear all sensitive data when this screen is disposed
+    _authController.clearAllForms();
+    super.dispose();
   }
 }
