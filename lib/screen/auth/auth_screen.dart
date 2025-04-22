@@ -30,16 +30,54 @@ class _AuthScreenState extends State<AuthScreen> {
         children: [
           // Background that changes based on theme
           const AuthBackground(),
-          
+
           // Main content
           SafeArea(
-            child: Center(
-              child: AuthBox(
-                width: formWidth,
-                child: _showLogin
-                    ? LoginForm(onSwitchToSignUp: _toggleView)
-                    : SignupForm(onSwitchToLogin: _toggleView),
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Calculate the maximum height available for the blurred box
+                final maxHeight = constraints.maxHeight - 60; // 30 padding from top and bottom
+                final boxHeight = _showLogin ? 400.0 : 500.0;
+
+                // Ensure the box height does not exceed the available height
+                final adjustedHeight = boxHeight > maxHeight ? maxHeight : boxHeight;
+
+                return Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeInOut,
+                    width: formWidth,
+                    height: adjustedHeight,
+                    child: AuthBox(
+                      width: formWidth,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 500),
+                        transitionBuilder: (child, animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0.0, 0.1),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: _showLogin
+                            ? LoginForm(
+                                key: const ValueKey('LoginForm'),
+                                onSwitchToSignUp: _toggleView,
+                              )
+                            : SignupForm(
+                                key: const ValueKey('SignupForm'),
+                                onSwitchToLogin: _toggleView,
+                              ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
