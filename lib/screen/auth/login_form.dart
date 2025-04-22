@@ -1,4 +1,8 @@
+// lib/screen/auth/login_form.dart
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:chewata/controller/auth_controller.dart';
+import 'package:chewata/services/auth_service.dart';
 
 class LoginForm extends StatefulWidget {
   final VoidCallback onSwitchToSignUp;
@@ -10,17 +14,15 @@ class LoginForm extends StatefulWidget {
 }
 
 class _LoginFormState extends State<LoginForm> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _isLoading = false;
+  final AuthController _authController = Get.put(AuthController());
+  final AuthService _authService = Get.find<AuthService>();
   bool _isPasswordVisible = false;
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Form(
-        key: _formKey,
+        key: _authController.loginFormKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
@@ -40,7 +42,7 @@ class _LoginFormState extends State<LoginForm> {
             
             // Email input field
             _buildInputField(
-              controller: _emailController,
+              controller: _authController.loginEmailController,
               label: "Email",
               icon: Icons.email,
               isPassword: false,
@@ -59,7 +61,7 @@ class _LoginFormState extends State<LoginForm> {
             
             // Password input field
             _buildInputField(
-              controller: _passwordController,
+              controller: _authController.loginPasswordController,
               label: "Password",
               icon: Icons.lock,
               isPassword: !_isPasswordVisible,
@@ -85,10 +87,10 @@ class _LoginFormState extends State<LoginForm> {
             const SizedBox(height: 24),
             
             // Login button
-            _isLoading
+            Obx(() => _authService.isLoading.value
                 ? const CircularProgressIndicator(color: Colors.deepPurple)
                 : ElevatedButton(
-                    onPressed: _handleLogin,
+                    onPressed: _authController.login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
                       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -105,7 +107,7 @@ class _LoginFormState extends State<LoginForm> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
+                  )),
             const SizedBox(height: 16),
             
             // Sign Up prompt
@@ -181,33 +183,5 @@ class _LoginFormState extends State<LoginForm> {
         ),
       ),
     );
-  }
-
-  Future<void> _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-      
-      try {
-        // Simulate backend login with delay
-        await Future.delayed(const Duration(seconds: 2));
-        
-        // Just navigate to home without actual backend connection
-        // In a real app, you would use a navigation service or GetX
-        if (mounted) {
-          Navigator.of(context).pushReplacementNamed('/home');
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
-      }
-    }
-  }
-  
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
   }
 }
