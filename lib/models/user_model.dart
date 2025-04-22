@@ -1,45 +1,42 @@
 // lib/models/user_model.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class UserModel {
   final String id;
-  final String email;
   final String fullName;
-  final String username;
-  final int age;
-  final String phone;
+  final String email;
+  final DateTime birthDate;
+  final String profilePicUrl;
   final DateTime createdAt;
-
+  
   UserModel({
     required this.id,
-    required this.email,
     required this.fullName,
-    required this.username,
-    required this.age,
-    required this.phone,
+    required this.email,
+    required this.birthDate,
+    required this.profilePicUrl,
     required this.createdAt,
   });
-
-  factory UserModel.fromMap(Map<String, dynamic> map, String id) {
-    return UserModel(
-      id: id,
-      email: map['email'] ?? '',
-      fullName: map['fullName'] ?? '',
-      username: map['username'] ?? '',
-      age: map['age'] ?? 0,
-      phone: map['phone'] ?? '',
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-    );
-  }
-
+  
+  // Convert UserModel to Map
   Map<String, dynamic> toMap() {
     return {
-      'email': email,
+      'id': id,
       'fullName': fullName,
-      'username': username,
-      'age': age,
-      'phone': phone,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'email': email,
+      'birthDate': birthDate.toIso8601String(),
+      'profilePicUrl': profilePicUrl,
+      'createdAt': createdAt.toIso8601String(),
     };
+  }
+  
+  // Create UserModel from Map
+  factory UserModel.fromMap(Map<String, dynamic> map) {
+    return UserModel(
+      id: map['id'] ?? '',
+      fullName: map['fullName'] ?? '',
+      email: map['email'] ?? '',
+      birthDate: DateTime.parse(map['birthDate']),
+      profilePicUrl: map['profilePicUrl'] ?? '',
+      createdAt: DateTime.parse(map['createdAt']),
+    );
   }
 }
