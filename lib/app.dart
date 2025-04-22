@@ -1,4 +1,5 @@
 // lib/app.dart
+import 'package:chewata/controller/auth_controller.dart';
 import 'package:chewata/screen/auth/auth_screen.dart';
 import 'package:chewata/screen/home_screen.dart';
 import 'package:chewata/screen/onboarding/onboarding.dart';
@@ -12,8 +13,9 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize AuthService with Get
-    Get.put(AuthService());
+    // Initialize services with Get
+    Get.put(AuthService(), permanent: true);
+    Get.put(AuthController(), permanent: true);
     
     return GetMaterialApp(
       title: 'Chewata chat',
@@ -31,22 +33,21 @@ class App extends StatelessWidget {
   }
   
   Widget _determineInitialScreen() {
-  return Obx(() {
-    try {
-      final firebaseUser = AuthService.instance.firebaseUser.value;
-      
-      // If the user is logged in, show home screen
-      if (firebaseUser != null) {
-        return const HomeScreen();
+    return Obx(() {
+      try {
+        final firebaseUser = AuthService.instance.firebaseUser.value;
+        
+        // If the user is logged in, show home screen
+        if (firebaseUser != null) {
+          return const HomeScreen();
+        }
+        
+        // Otherwise show onboarding
+        return const OnBoardingScreen();
+      } catch (e) {
+        // If there's an error, default to the onboarding screen
+        return const OnBoardingScreen();
       }
-      
-      // Otherwise show onboarding
-      return const OnBoardingScreen();
-    } catch (e) {
-      // If there's an error (like the late initialization error),
-      // default to the onboarding screen
-      return const OnBoardingScreen();
-    }
-  });
-}
+    });
+  }
 }
