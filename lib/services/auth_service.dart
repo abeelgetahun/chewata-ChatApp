@@ -1,129 +1,169 @@
 // lib/services/auth_service.dart
-
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chewata/models/user_model.dart';
 
 class AuthService extends GetxController {
   static AuthService get instance => Get.find();
   
-  // Variables
-  final _auth = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
+  // Firebase instances
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
   
-  // Initialize firebaseUser in the constructor
-  late final Rx<User?> firebaseUser = Rx<User?>(_auth.currentUser);
-  var verificationId = ''.obs;
+  // Rx variables to track changes in user authentication
+  final Rx<User?> firebaseUser = Rx<User?>(null);
+  final Rx<UserModel?> userModel = Rx<UserModel?>(null);
+  final RxBool isLoading = false.obs;
   
-  // Will be loaded when app launches
   @override
-  void onReady() {
-    // Just set up the stream binding, the variable is already initialized
+  void onInit() {
+    super.onInit();
+    // Track user authentication state changes
     firebaseUser.bindStream(_auth.userChanges());
-    ever(firebaseUser, _setInitialScreen);
-    super.onReady();
+    // When firebaseUser changes, fetch user data from Firestore
+    ever(firebaseUser, _setUserModel);
   }
   
-  // Setting initial screen
-  _setInitialScreen(User? user) {
-    if (user == null) {
-      // User is not logged in
-      // You can handle navigation here if needed
+  // Fetch user data from Firestore when user logs in
+  Future<void> _setUserModel(User? user) async {
+    if (user != null) {
+      userModel.value = await getUserDataFromFirestore(user.uid);
     } else {
-      // User is logged in
-      // You can handle navigation here if needed
+      userModel.value = null;
     }
   }
-
-  // LOGIN
-  Future<bool> loginWithEmailAndPassword(String emailOrPhone, String password) async {
+  
+  // Fetch user data from Firestore
+  Future<UserModel?> getUserDataFromFirestore(String uid) async {
     try {
-      // Try login with email
-      if (emailOrPhone.contains('@')) {
-        await _auth.signInWithEmailAndPassword(email: emailOrPhone, password: password);
-      } else {
-        // Login with phone number (username)
-        // First query Firestore to find the user with this username
-        final userDocs = await _firestore.collection('users')
-            .where('username', isEqualTo: emailOrPhone)
-            .limit(1)
-            .get();
-        
-        if (userDocs.docs.isEmpty) {
-          throw FirebaseAuthException(
-            code: 'user-not-found',
-            message: 'No user found with this username',
-          );
-        }
-        
-        // Get the email associated with this username
-        final userEmail = userDocs.docs.first.data()['email'];
-        
-        // Now sign in with email and password
-        await _auth.signInWithEmailAndPassword(
-          email: userEmail, 
-          password: password
-        );
+      final doc = await _db.collection('users').doc(uid).get();
+      if (doc.exists) {
+        return UserModel.fromMap(doc.data()!);
       }
-      return true;
-    } on FirebaseAuthException catch (e) {
-      Get.snackbar(
-        'Authentication Error',
-        e.message ?? 'Failed to login. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent.withOpacity(0.1),
-        colorText: Colors.red,
-      );
-      return false;
+      return null;
+    } catch (e) {
+      print('Error fetching user data: $e');
+      return null;
     }
   }
-
-  // REGISTER
-  Future<bool> registerWithEmailAndPassword(String email, String password, String fullName, String username, int age, String phone) async {
+  
+  // Email & Password Sign Up
+  Future<UserCredential?> signUpWithEmailAndPassword({
+    required String email,
+    required String password,
+    required String fullName,
+    required DateTime birthDate,
+  }) async {
     try {
-      // First check if username already exists
-      final usernameCheck = await _firestore.collection('users')
-          .where('username', isEqualTo: username)
-          .limit(1)
-          .get();
+      isLoading.value = true;
+      // Create user in Firebase Auth
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
       
-      if (usernameCheck.docs.isNotEmpty) {
-        throw FirebaseAuthException(
-          code: 'username-exists',
-          message: 'Username already exists',
+      // Create user document in Firestore
+      if (userCredential.user != null) {
+        final user = UserModel(
+          id: userCredential.user!.uid,
+          fullName: fullName,
+          email: email,
+          birthDate: birthDate,
+          profilePicUrl: '',
+          createdAt: DateTime.now(),
         );
+        
+        await _db.collection('users').doc(userCredential.user!.uid).set(user.toMap());
+        return userCredential;
       }
-      
-      // Create the user
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email, 
-        password: password
-      );
-      
-      // Store additional user data in Firestore
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'fullName': fullName,
-        'username': username,
-        'age': age,
-        'phone': phone,
-        'email': email,
-        'createdAt': Timestamp.now(),
-      });
-      
-      return true;
+      return null;
     } on FirebaseAuthException catch (e) {
-      Get.snackbar(
-        'Registration Error',
-        e.message ?? 'Failed to register. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent.withOpacity(0.1),
-        colorText: Colors.red,
-      );
-      return false;
+      handleFirebaseAuthError(e);
+      return null;
+    } catch (e) {
+      Get.snackbar('Error', 'Something went wrong. Please try again.');
+      print('SignUp Error: $e');
+      return null;
+    } finally {
+      isLoading.value = false;
     }
   }
-
-  // LOGOUT
-  Future<void> logout() async => await _auth.signOut();
+  
+  // Email & Password Login
+  Future<UserCredential?> loginWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      isLoading.value = true;
+      return await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+    } on FirebaseAuthException catch (e) {
+      handleFirebaseAuthError(e);
+      return null;
+    } catch (e) {
+      Get.snackbar('Error', 'Something went wrong. Please try again.');
+      print('Login Error: $e');
+      return null;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+  
+  // Sign out
+  Future<void> logout() async {
+    try {
+      await _auth.signOut();
+      Get.offAllNamed('/auth');
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to log out. Please try again.');
+      print('Logout Error: $e');
+    }
+  }
+  
+  // Password Reset
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      Get.snackbar('Success', 'Password reset email sent. Please check your inbox.');
+    } on FirebaseAuthException catch (e) {
+      handleFirebaseAuthError(e);
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to send password reset email.');
+      print('Password Reset Error: $e');
+    }
+  }
+  
+  // Handle Firebase Auth errors
+  void handleFirebaseAuthError(FirebaseAuthException e) {
+    String message = 'An error occurred. Please try again.';
+    
+    switch (e.code) {
+      case 'user-not-found':
+        message = 'No user found for this email.';
+        break;
+      case 'wrong-password':
+        message = 'Wrong password provided.';
+        break;
+      case 'email-already-in-use':
+        message = 'The email address is already in use.';
+        break;
+      case 'invalid-email':
+        message = 'The email address is invalid.';
+        break;
+      case 'weak-password':
+        message = 'The password is too weak.';
+        break;
+      case 'operation-not-allowed':
+        message = 'This operation is not allowed.';
+        break;
+      default:
+        message = 'An error occurred. Please try again.';
+    }
+    
+    Get.snackbar('Authentication Error', message);
+  }
 }
