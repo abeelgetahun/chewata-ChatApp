@@ -1,6 +1,7 @@
 // lib/screen/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:chewata/controller/auth_controller.dart';
 import 'package:chewata/services/auth_service.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -8,15 +9,36 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AuthController authController = Get.find<AuthController>();
+    final AuthService authService = Get.find<AuthService>();
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chewata Home'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await AuthService.instance.logout();
-              Get.offAllNamed('/auth');
+            onPressed: () {
+              // Show confirmation dialog
+              Get.dialog(
+                AlertDialog(
+                  title: const Text('Logout'),
+                  content: const Text('Are you sure you want to logout?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Get.back(),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Get.back();
+                        authController.logout();
+                      },
+                      child: const Text('Logout'),
+                    ),
+                  ],
+                ),
+              );
             },
           ),
         ],
@@ -33,10 +55,13 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            Text(
-              'You are logged in as: ${AuthService.instance.firebaseUser.value?.email}',
-              style: const TextStyle(fontSize: 16),
-            ),
+            Obx(() {
+              final user = authService.firebaseUser.value;
+              return Text(
+                'You are logged in as: ${user?.email ?? "Unknown"}',
+                style: const TextStyle(fontSize: 16),
+              );
+            }),
           ],
         ),
       ),
