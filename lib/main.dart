@@ -7,6 +7,7 @@ import 'firebase_options.dart';
 import 'package:chewata/app.dart';
 
 void main() async {
+  // Ensure Flutter bindings are initialized in the same zone
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load environment variables
@@ -18,16 +19,9 @@ void main() async {
   );
 
   // Set up global error handling
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    // Log the error or send it to a monitoring service
-    debugPrint('Flutter Error: ${details.exceptionAsString()}');
-  };
-
   runZonedGuarded(() {
     runApp(const App());
   }, (error, stackTrace) {
-    // Handle uncaught asynchronous errors
     debugPrint('Uncaught Error: $error');
     debugPrint('Stack Trace: $stackTrace');
   });
