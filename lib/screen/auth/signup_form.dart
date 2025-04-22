@@ -1,4 +1,8 @@
+// lib/screen/auth/signup_form.dart
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:chewata/controller/auth_controller.dart';
+import 'package:chewata/services/auth_service.dart';
 
 class SignupForm extends StatefulWidget {
   final VoidCallback onSwitchToLogin;
@@ -10,15 +14,8 @@ class SignupForm extends StatefulWidget {
 }
 
 class _SignupFormState extends State<SignupForm> {
-  final _formKey = GlobalKey<FormState>();
-  final _fullNameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _birthDateController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  
-  DateTime? _selectedDate;
-  bool _isLoading = false;
+  final AuthController _authController = Get.find<AuthController>();
+  final AuthService _authService = Get.find<AuthService>();
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
@@ -26,7 +23,7 @@ class _SignupFormState extends State<SignupForm> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Form(
-        key: _formKey,
+        key: _authController.signupFormKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -44,7 +41,7 @@ class _SignupFormState extends State<SignupForm> {
 
             // Full Name input field
             _buildInputField(
-              controller: _fullNameController,
+              controller: _authController.signupFullNameController,
               label: "Full Name",
               icon: Icons.person,
               isPassword: false,
@@ -58,7 +55,7 @@ class _SignupFormState extends State<SignupForm> {
 
             // Email input field
             _buildInputField(
-              controller: _emailController,
+              controller: _authController.signupEmailController,
               label: "Email",
               icon: Icons.email,
               isPassword: false,
@@ -79,7 +76,7 @@ class _SignupFormState extends State<SignupForm> {
 
             // Password input field
             _buildInputField(
-              controller: _passwordController,
+              controller: _authController.signupPasswordController,
               label: "Password",
               icon: Icons.lock,
               isPassword: !_isPasswordVisible,
@@ -107,7 +104,7 @@ class _SignupFormState extends State<SignupForm> {
 
             // Confirm Password input field
             _buildInputField(
-              controller: _confirmPasswordController,
+              controller: _authController.signupConfirmPasswordController,
               label: "Confirm Password",
               icon: Icons.lock_outline,
               isPassword: !_isConfirmPasswordVisible,
@@ -115,7 +112,7 @@ class _SignupFormState extends State<SignupForm> {
                 if (value == null || value.isEmpty) {
                   return 'Please confirm your password';
                 }
-                if (value != _passwordController.text) {
+                if (value != _authController.signupPasswordController.text) {
                   return 'Passwords do not match';
                 }
                 return null;
@@ -136,10 +133,10 @@ class _SignupFormState extends State<SignupForm> {
             const SizedBox(height: 24),
 
             // Sign Up button
-            _isLoading
+            Obx(() => _authService.isLoading.value
                 ? const CircularProgressIndicator(color: Colors.deepPurple)
                 : ElevatedButton(
-                    onPressed: _handleSignup,
+                    onPressed: _authController.signup,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
                       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -156,7 +153,7 @@ class _SignupFormState extends State<SignupForm> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
+                  )),
 
             const SizedBox(height: 16),
 
@@ -239,7 +236,7 @@ class _SignupFormState extends State<SignupForm> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextFormField(
-        controller: _birthDateController,
+        controller: _authController.signupBirthDateController,
         readOnly: true,
         onTap: () => _selectDate(context),
         style: const TextStyle(color: Colors.white),
@@ -296,43 +293,8 @@ class _SignupFormState extends State<SignupForm> {
       },
     );
 
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-        _birthDateController.text =
-            "${picked.day}/${picked.month}/${picked.year}";
-      });
+    if (picked != null) {
+      _authController.setSelectedBirthDate(picked);
     }
-  }
-
-  Future<void> _handleSignup() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-
-      try {
-        // Simulate backend registration with delay
-        await Future.delayed(const Duration(seconds: 2));
-        
-        // Just navigate to home without actual backend connection
-        // In a real app, you would use a navigation service or GetX
-        if (mounted) {
-          Navigator.of(context).pushReplacementNamed('/home');
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _fullNameController.dispose();
-    _emailController.dispose();
-    _birthDateController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
   }
 }
