@@ -31,12 +31,18 @@ class AuthController extends GetxController {
   // Handle login
   Future<void> login() async {
     if (loginFormKey.currentState!.validate()) {
+      final email = loginEmailController.text.trim();
+      final password = loginPasswordController.text.trim();
+      
       final userCredential = await _authService.loginWithEmailAndPassword(
-        email: loginEmailController.text.trim(),
-        password: loginPasswordController.text.trim(),
+        email: email,
+        password: password,
       );
       
       if (userCredential != null) {
+        // Clear sensitive form data
+        clearLoginForm();
+        
         // Successfully logged in
         Get.offAllNamed('/home');
       }
@@ -46,20 +52,57 @@ class AuthController extends GetxController {
   // Handle signup
   Future<void> signup() async {
     if (signupFormKey.currentState!.validate() && selectedBirthDate.value != null) {
+      final email = signupEmailController.text.trim();
+      final password = signupPasswordController.text.trim();
+      final fullName = signupFullNameController.text.trim();
+      final birthDate = selectedBirthDate.value!;
+      
       final userCredential = await _authService.signUpWithEmailAndPassword(
-        email: signupEmailController.text.trim(),
-        password: signupPasswordController.text.trim(),
-        fullName: signupFullNameController.text.trim(),
-        birthDate: selectedBirthDate.value!,
+        email: email,
+        password: password,
+        fullName: fullName,
+        birthDate: birthDate,
       );
       
       if (userCredential != null) {
+        // Clear sensitive form data
+        clearSignupForm();
+        
         // Successfully signed up
         Get.offAllNamed('/home');
       }
     } else if (selectedBirthDate.value == null) {
       Get.snackbar('Error', 'Please select your birth date');
     }
+  }
+  
+  // Clear login form
+  void clearLoginForm() {
+    loginEmailController.clear();
+    loginPasswordController.clear();
+  }
+  
+  // Clear signup form
+  void clearSignupForm() {
+    signupFullNameController.clear();
+    signupEmailController.clear();
+    signupBirthDateController.clear();
+    signupPasswordController.clear();
+    signupConfirmPasswordController.clear();
+    selectedBirthDate.value = null;
+  }
+  
+  // Clear all forms
+  void clearAllForms() {
+    clearLoginForm();
+    clearSignupForm();
+  }
+  
+  // Handle logout
+  void logout() async {
+    await _authService.logout();
+    clearAllForms();
+    Get.offAllNamed('/auth');
   }
   
   // Set selected birth date
