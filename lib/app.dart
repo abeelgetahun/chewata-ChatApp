@@ -1,5 +1,5 @@
-// lib/app.dart
 import 'package:chewata/controller/auth_controller.dart';
+import 'package:chewata/controller/theme_controller.dart';
 import 'package:chewata/screen/auth/auth_screen.dart';
 import 'package:chewata/screen/home_screen.dart';
 import 'package:chewata/screen/onboarding/onboarding.dart';
@@ -17,9 +17,12 @@ class App extends StatelessWidget {
     Get.put(AuthService(), permanent: true);
     Get.put(AuthController(), permanent: true);
     
-    return GetMaterialApp(
+    // Get theme controller (already initialized in main.dart)
+    final ThemeController themeController = Get.find<ThemeController>();
+    
+    return Obx(() => GetMaterialApp(
       title: 'Chewata chat',
-      themeMode: ThemeMode.system,
+      themeMode: themeController.getThemeMode(),
       theme: TAppTheme.lightTheme,
       darkTheme: TAppTheme.darkTheme,
       initialRoute: '/',
@@ -29,7 +32,7 @@ class App extends StatelessWidget {
         GetPage(name: '/auth', page: () => const AuthScreen()),
         GetPage(name: '/home', page: () => const HomeScreen()),
       ],
-    );
+    ));
   }
   
   Widget _determineInitialScreen() {
