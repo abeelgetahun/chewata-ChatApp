@@ -20,6 +20,12 @@ class _LoginFormState extends State<LoginForm> {
 
   @override
   Widget build(BuildContext context) {
+    // Determine the current theme mode (light or dark)
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Set text color based on the theme mode
+    final textColor = isDarkMode ? Colors.white : Colors.black;
+
     return SingleChildScrollView(
       child: Form(
         key: _authController.loginFormKey,
@@ -28,18 +34,18 @@ class _LoginFormState extends State<LoginForm> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Text(
+            Text(
               "Welcome to Chewata",
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: textColor,
                 fontFamily: "Poppins",
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            
+
             // Email input field
             _buildInputField(
               controller: _authController.loginEmailController,
@@ -58,7 +64,7 @@ class _LoginFormState extends State<LoginForm> {
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Password input field
             _buildInputField(
               controller: _authController.loginPasswordController,
@@ -83,9 +89,8 @@ class _LoginFormState extends State<LoginForm> {
                 },
               ),
             ),
-            
             const SizedBox(height: 24),
-            
+
             // Login button
             Obx(() => _authService.isLoading.value
                 ? const CircularProgressIndicator(color: Colors.deepPurple)
@@ -109,21 +114,21 @@ class _LoginFormState extends State<LoginForm> {
                     ),
                   )),
             const SizedBox(height: 16),
-            
+
             // Sign Up prompt
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
+                Text(
                   "Don't have an account? ",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: textColor,
                     fontSize: 14,
                   ),
                 ),
                 GestureDetector(
                   onTap: widget.onSwitchToSignUp,
-                  child: const Text(
+                  child: Text(
                     "Sign Up",
                     style: TextStyle(
                       color: Colors.deepPurple,
@@ -150,36 +155,39 @@ class _LoginFormState extends State<LoginForm> {
     TextInputType keyboardType = TextInputType.text,
     Widget? suffixIcon,
   }) {
+    // Determine the current theme mode (light or dark)
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextFormField(
         controller: controller,
         obscureText: isPassword,
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: isDarkMode ? Colors.white : Colors.black), // Text color dynamically set
         keyboardType: keyboardType,
         validator: validator,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(
-            color: Colors.white70,
+          labelStyle: TextStyle(
+            color: isDarkMode ? Colors.white70 : Colors.black54, // Label text color dynamically set
             fontWeight: FontWeight.normal,
           ),
           floatingLabelBehavior: FloatingLabelBehavior.auto,
-          prefixIcon: Icon(icon, color: Colors.white),
+          prefixIcon: Icon(icon, color: isDarkMode ? Colors.white : Colors.black), // Icon color dynamically set
           suffixIcon: suffixIcon,
           enabledBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.white70),
+            borderSide: BorderSide(color: Colors.grey), // Keep border color unchanged
           ),
           focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.white, width: 2),
+            borderSide: BorderSide(color: Colors.deepPurple, width: 2), // Keep border color unchanged
           ),
           errorBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.redAccent),
+            borderSide: BorderSide(color: Colors.redAccent), // Keep error border color unchanged
           ),
           focusedErrorBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.redAccent, width: 2),
+            borderSide: BorderSide(color: Colors.redAccent, width: 2), // Keep error border color unchanged
           ),
-          errorStyle: const TextStyle(color: Colors.redAccent),
+          errorStyle: const TextStyle(color: Colors.redAccent), // Keep error text color unchanged
         ),
       ),
     );
