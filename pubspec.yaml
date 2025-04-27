@@ -43,6 +43,9 @@ dependencies:
   firebase_core: ^3.13.0
   firebase_auth: ^5.5.2
   cloud_firestore: ^5.6.6
+  google_nav_bar: ^5.0.7
+  flutter_svg: ^2.1.0
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:
@@ -72,6 +75,13 @@ flutter:
      - assets/images/auth_images/login_background.jpg
      - assets/images/auth_images/login_background_dark.jpg
      - .env
+     - assets/icons/home_chewata_nav.svg
+     - assets/icons/home_connect_nav.svg
+     - assets/icons/home_fun_nav.svg
+     - assets/icons/home_account_nav.svg
+     - assets/icons/dark_mode.svg
+     - assets/icons/search.svg
+     - assets/icons/log_out.svg
      
   #   - images/a_dot_ham.jpeg
 
