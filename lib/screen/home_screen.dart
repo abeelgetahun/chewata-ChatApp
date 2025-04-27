@@ -4,6 +4,7 @@ import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:chewata/controller/auth_controller.dart';
 import 'package:chewata/controller/navigation_controller.dart';
+import 'package:chewata/controller/theme_controller.dart';
 import 'package:chewata/services/auth_service.dart';
 import 'package:chewata/screen/connect_screen.dart';
 import 'package:chewata/screen/fun_screen.dart';
@@ -20,6 +21,7 @@ class HomeScreen extends StatelessWidget {
     // Initialize controllers
     final AuthController authController = Get.find<AuthController>();
     final AuthService authService = Get.find<AuthService>();
+    final ThemeController themeController = Get.find<ThemeController>();
 
     // Initialize navigation controller if not already done
     if (!Get.isRegistered<NavigationController>()) {
@@ -42,15 +44,14 @@ class HomeScreen extends StatelessWidget {
             fontFamily: 'Poppins',
             fontWeight: FontWeight.bold,
             fontSize: 24,
-            // Use a color that works with your app bar background
-            color: Colors.black,
           ),
         ),
         centerTitle: false, 
         actions: [
           IconButton(
             onPressed: () {
-              // Toggle Dark Mode logic
+              // Show theme selection dialog
+              _showThemeSelectionDialog(context, themeController);
             },
             icon: _buildAppBarIcon('assets/icons/dark_mode.svg', isDarkMode),
           ),
@@ -119,6 +120,79 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showThemeSelectionDialog(BuildContext context, ThemeController themeController) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Choose Theme'),
+          content: SizedBox(
+            width: double.minPositive,
+            child: GetBuilder<ThemeController>(
+              builder: (controller) {
+                final currentThemeMode = controller.getThemeMode();
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildThemeOption(
+                      context, 
+                      'Light', 
+                      Icons.light_mode, 
+                      currentThemeMode == ThemeMode.light,
+                      () => controller.setThemeMode(ThemeMode.light),
+                    ),
+                    const Divider(),
+                    _buildThemeOption(
+                      context, 
+                      'Dark', 
+                      Icons.dark_mode, 
+                      currentThemeMode == ThemeMode.dark,
+                      () => controller.setThemeMode(ThemeMode.dark),
+                    ),
+                    const Divider(),
+                    _buildThemeOption(
+                      context, 
+                      'System', 
+                      Icons.settings_suggest, 
+                      currentThemeMode == ThemeMode.system,
+                      () => controller.setThemeMode(ThemeMode.system),
+                    ),
+                  ],
+                );
+              }
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildThemeOption(
+    BuildContext context, 
+    String title, 
+    IconData icon, 
+    bool isSelected, 
+    VoidCallback onTap
+  ) {
+    return ListTile(
+      title: Text(title),
+      leading: Icon(icon),
+      trailing: isSelected ? Icon(Icons.check, color: Theme.of(context).primaryColor) : null,
+      onTap: () {
+        onTap();
+        Navigator.of(context).pop();
+      },
     );
   }
 
