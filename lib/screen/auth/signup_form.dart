@@ -18,75 +18,27 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
   final AuthService _authService = Get.find<AuthService>();
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
-  bool _isPasswordTouched = false;
-  bool _isPasswordValid = false;
-  
-  // Animation controller for password validation text
-  late AnimationController _animationController;
-  late Animation<double> _opacityAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _opacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOut,
-      ),
-    );
-    
-    // Listen to password changes to update validation state
-    _authController.signupPasswordController.addListener(_validatePassword);
-  }
-  
-  void _validatePassword() {
-    final password = _authController.signupPasswordController.text;
-    
-    if (password.isNotEmpty && !_isPasswordTouched) {
-      setState(() => _isPasswordTouched = true);
-    }
-    
-    final wasValid = _isPasswordValid;
-    final isNowValid = password.length >= 6;
-    
-    if (wasValid != isNowValid) {
-      setState(() => _isPasswordValid = isNowValid);
-      
-      if (isNowValid) {
-        // If now valid, start fade out animation
-        _animationController.forward();
-      } else {
-        // If not valid, make helper text visible again
-        _animationController.reset();
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    _authController.signupPasswordController.removeListener(_validatePassword);
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
+    // Determine the current theme mode (light or dark)
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Set text color based on the theme mode
+    final textColor = isDarkMode ? Colors.white : Colors.black;
+
     return SingleChildScrollView(
       child: Form(
         key: _authController.signupFormKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               "Create an Account",
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: textColor,
                 fontFamily: "Poppins",
               ),
               textAlign: TextAlign.center,
@@ -99,6 +51,7 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
               label: "Full Name",
               icon: Icons.person,
               isPassword: false,
+              textColor: textColor,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter your full name';
@@ -116,6 +69,7 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
               label: "Email",
               icon: Icons.email,
               isPassword: false,
+              textColor: textColor,
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -129,76 +83,34 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
             ),
 
             // Birth Date input field
-            _buildBirthDateField(),
+            _buildBirthDateField(textColor),
 
-            // Password input field with animated validation
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextFormField(
-                    controller: _authController.signupPasswordController,
-                    obscureText: !_isPasswordVisible,
-                    style: const TextStyle(color: Colors.white),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                    decoration: InputDecoration(
-                      labelText: "Password",
-                      labelStyle: const TextStyle(
-                        color: Colors.white70,
-                        fontWeight: FontWeight.normal,
-                      ),
-                      floatingLabelBehavior: FloatingLabelBehavior.auto,
-                      prefixIcon: const Icon(Icons.lock, color: Colors.white),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                          color: Colors.white70,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
-                          });
-                        },
-                      ),
-                      enabledBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white70),
-                      ),
-                      focusedBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white, width: 2),
-                      ),
-                      errorBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.redAccent),
-                      ),
-                      focusedErrorBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.redAccent, width: 2),
-                      ),
-                      errorStyle: const TextStyle(color: Colors.redAccent),
-                    ),
-                  ),
-                  if (_isPasswordTouched)
-                    FadeTransition(
-                      opacity: _opacityAnimation,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 6, left: 12),
-                        child: Text(
-                          'At least 6 characters',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _isPasswordValid ? Colors.green : Colors.redAccent,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+            // Password input field
+            _buildInputField(
+              controller: _authController.signupPasswordController,
+              label: "Password",
+              icon: Icons.lock,
+              isPassword: !_isPasswordVisible,
+              textColor: textColor,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a password';
+                }
+                if (value.length < 6) {
+                  return 'Password must be at least 6 characters';
+                }
+                return null;
+              },
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                  color: isDarkMode ? Colors.white70 : Colors.black54,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _isPasswordVisible = !_isPasswordVisible;
+                  });
+                },
               ),
             ),
 
@@ -208,6 +120,7 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
               label: "Confirm Password",
               icon: Icons.lock_outline,
               isPassword: !_isConfirmPasswordVisible,
+              textColor: textColor,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please confirm your password';
@@ -220,7 +133,7 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
               suffixIcon: IconButton(
                 icon: Icon(
                   _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                  color: Colors.white70,
+                  color: isDarkMode ? Colors.white70 : Colors.black54,
                 ),
                 onPressed: () {
                   setState(() {
@@ -261,16 +174,16 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
+                Text(
                   "Already have an account? ",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: textColor,
                     fontSize: 14,
                   ),
                 ),
                 GestureDetector(
                   onTap: widget.onSwitchToLogin,
-                  child: const Text(
+                  child: Text(
                     "Login",
                     style: TextStyle(
                       color: Colors.deepPurple,
@@ -293,10 +206,10 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
     required IconData icon,
     required bool isPassword,
     required TextEditingController controller,
+    required Color textColor,
     String? Function(String?)? validator,
     TextInputType keyboardType = TextInputType.text,
     Widget? suffixIcon,
-    String? helperText,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -305,44 +218,42 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
         obscureText: isPassword,
         keyboardType: keyboardType,
         validator: validator,
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: textColor), // Text color dynamically set
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(
-            color: Colors.white70,
+          labelStyle: TextStyle(
+            color: textColor.withOpacity(0.7), // Label text color dynamically set
             fontWeight: FontWeight.normal,
           ),
           floatingLabelBehavior: FloatingLabelBehavior.auto,
-          prefixIcon: Icon(icon, color: Colors.white),
+          prefixIcon: Icon(icon, color: textColor), // Icon color dynamically set
           suffixIcon: suffixIcon,
           enabledBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.white70),
+            borderSide: BorderSide(color: Colors.grey), // Keep border color unchanged
           ),
           focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.white, width: 2),
+            borderSide: BorderSide(color: Colors.deepPurple, width: 2), // Keep border color unchanged
           ),
           errorBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.redAccent),
+            borderSide: BorderSide(color: Colors.redAccent), // Keep error border color unchanged
           ),
           focusedErrorBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.redAccent, width: 2),
+            borderSide: BorderSide(color: Colors.redAccent, width: 2), // Keep error border color unchanged
           ),
-          errorStyle: const TextStyle(color: Colors.redAccent),
-          helperText: helperText,
-          helperStyle: const TextStyle(color: Colors.white70),
+          errorStyle: const TextStyle(color: Colors.redAccent), // Keep error text color unchanged
         ),
       ),
     );
   }
 
-  Widget _buildBirthDateField() {
+  Widget _buildBirthDateField(Color textColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextFormField(
         controller: _authController.signupBirthDateController,
         readOnly: true,
         onTap: () => _selectDate(context),
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: textColor), // Text color dynamically set
         validator: (value) {
           if (value == null || value.isEmpty) {
             return 'Please select your birth date';
@@ -351,25 +262,25 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
         },
         decoration: InputDecoration(
           labelText: "Birth Date",
-          labelStyle: const TextStyle(
-            color: Colors.white70,
+          labelStyle: TextStyle(
+            color: textColor.withOpacity(0.7), // Label text color dynamically set
             fontWeight: FontWeight.normal,
           ),
           floatingLabelBehavior: FloatingLabelBehavior.auto,
-          prefixIcon: const Icon(Icons.calendar_today, color: Colors.white),
+          prefixIcon: Icon(Icons.calendar_today, color: textColor), // Icon color dynamically set
           enabledBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.white70),
+            borderSide: BorderSide(color: Colors.grey), // Keep border color unchanged
           ),
           focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.white, width: 2),
+            borderSide: BorderSide(color: Colors.deepPurple, width: 2), // Keep border color unchanged
           ),
           errorBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.redAccent),
+            borderSide: BorderSide(color: Colors.redAccent), // Keep error border color unchanged
           ),
           focusedErrorBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.redAccent, width: 2),
+            borderSide: BorderSide(color: Colors.redAccent, width: 2), // Keep error border color unchanged
           ),
-          errorStyle: const TextStyle(color: Colors.redAccent),
+          errorStyle: const TextStyle(color: Colors.redAccent), // Keep error text color unchanged
         ),
       ),
     );
