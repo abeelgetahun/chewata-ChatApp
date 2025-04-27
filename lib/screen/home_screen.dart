@@ -37,16 +37,20 @@ class HomeScreen extends StatelessWidget {
       const AccountScreen(),
     ];
 
+    // PageController for PageView
+    final PageController pageController = PageController();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chewata',
+        title: const Text(
+          'Chewata',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.bold,
             fontSize: 24,
           ),
         ),
-        centerTitle: false, 
+        centerTitle: false,
         actions: [
           IconButton(
             onPressed: () {
@@ -55,14 +59,14 @@ class HomeScreen extends StatelessWidget {
             },
             icon: _buildAppBarIcon('assets/icons/dark_mode.svg', isDarkMode),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           IconButton(
             onPressed: () {
               // Navigate to Search screen or show search bar
             },
             icon: _buildAppBarIcon('assets/icons/search.svg', isDarkMode),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           IconButton(
             onPressed: () {
               // Your logout logic here
@@ -72,16 +76,14 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Obx(() => AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        transitionBuilder: (Widget child, Animation<double> animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+      body: PageView(
+        controller: pageController,
+        onPageChanged: (index) {
+          // Update the selected index in the NavigationController
+          navigationController.changeIndex(index);
         },
-        child: screens[navigationController.selectedIndex.value],
-      )),
+        children: screens,
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isDarkMode ? Colors.grey[900] : Colors.white,
@@ -99,13 +101,15 @@ class HomeScreen extends StatelessWidget {
             child: Obx(() => GNav(
               selectedIndex: navigationController.selectedIndex.value,
               onTabChange: (index) {
-                navigationController.changeIndex(index);
+                // Navigate to the selected page in the PageView
+                pageController.jumpToPage(index);
               },
               rippleColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
               hoverColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
               gap: 8,
               activeColor: isDarkMode ? Colors.white : Colors.black,
               iconSize: 24,
+              tabActiveBorder: Border.all(color: Colors.black, width: 1),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               duration: const Duration(milliseconds: 400),
               tabBackgroundColor: isDarkMode ? Colors.grey[800]! : Colors.grey[100]!,
@@ -138,31 +142,31 @@ class HomeScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _buildThemeOption(
-                      context, 
-                      'Light', 
-                      Icons.light_mode, 
+                      context,
+                      'Light',
+                      Icons.light_mode,
                       currentThemeMode == ThemeMode.light,
                       () => controller.setThemeMode(ThemeMode.light),
                     ),
                     const Divider(),
                     _buildThemeOption(
-                      context, 
-                      'Dark', 
-                      Icons.dark_mode, 
+                      context,
+                      'Dark',
+                      Icons.dark_mode,
                       currentThemeMode == ThemeMode.dark,
                       () => controller.setThemeMode(ThemeMode.dark),
                     ),
                     const Divider(),
                     _buildThemeOption(
-                      context, 
-                      'System', 
-                      Icons.settings_suggest, 
+                      context,
+                      'System',
+                      Icons.settings_suggest,
                       currentThemeMode == ThemeMode.system,
                       () => controller.setThemeMode(ThemeMode.system),
                     ),
                   ],
                 );
-              }
+              },
             ),
           ),
           actions: [
@@ -179,11 +183,11 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildThemeOption(
-    BuildContext context, 
-    String title, 
-    IconData icon, 
-    bool isSelected, 
-    VoidCallback onTap
+    BuildContext context,
+    String title,
+    IconData icon,
+    bool isSelected,
+    VoidCallback onTap,
   ) {
     return ListTile(
       title: Text(title),
@@ -211,7 +215,7 @@ class HomeScreen extends StatelessWidget {
   Widget _buildAppBarIcon(String assetPath, bool isDarkMode) {
     // Adaptive color based on theme
     final iconColor = isDarkMode ? Colors.white : Colors.black;
-    
+
     return SvgPicture.asset(
       assetPath,
       height: 24,
@@ -219,10 +223,13 @@ class HomeScreen extends StatelessWidget {
       colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
       placeholderBuilder: (BuildContext context) => Icon(
         // Fallback icons based on which SVG failed to load
-        assetPath.contains('search') ? Icons.search :
-        assetPath.contains('dark_mode') ? Icons.dark_mode :
-        assetPath.contains('logout') ? Icons.logout : 
-        Icons.error,
+        assetPath.contains('search')
+            ? Icons.search
+            : assetPath.contains('dark_mode')
+                ? Icons.dark_mode
+                : assetPath.contains('logout')
+                    ? Icons.logout
+                    : Icons.error,
         color: iconColor,
         size: 24,
       ),
