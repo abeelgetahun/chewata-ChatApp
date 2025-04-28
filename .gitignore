@@ -12,8 +12,15 @@
 .swiftpm/
 migrate_working_dir/
 
-# Environment variables
+# Environment variables and sensitive data
 .env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p8
+*.key
+*.pem
 
 # IntelliJ related
 *.iml
@@ -49,3 +56,7 @@ app.*.map.json
 
 # Firebase configuration file
 android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+ios/firebase_app_id_file.json
+macos/Runner/GoogleService-Info.plist
+macos/firebase_app_id_file.json
