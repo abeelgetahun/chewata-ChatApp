@@ -1,3 +1,4 @@
+import 'package:chewata/screen/chat/chat_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
@@ -236,30 +237,10 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHomeContent(AuthService authService) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            'Welcome to Chewata',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Obx(() {
-            final user = authService.firebaseUser.value;
-            return Text(
-              'You are logged in as: ${user?.email ?? "Unknown"}',
-              style: const TextStyle(fontSize: 16),
-            );
-          }),
-        ],
-      ),
-    );
-  }
+  // Update the _buildHomeContent method in home_screen.dart
+Widget _buildHomeContent(AuthService authService) {
+  return const ChatListScreen();
+}
 }
 
 // Custom icon widget that handles SVG icons and adapts to theme
