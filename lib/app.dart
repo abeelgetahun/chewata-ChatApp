@@ -1,6 +1,8 @@
 import 'package:chewata/controller/auth_controller.dart';
+import 'package:chewata/controller/chat_controller.dart';
 import 'package:chewata/controller/theme_controller.dart';
 import 'package:chewata/screen/auth/auth_screen.dart';
+import 'package:chewata/screen/chat/chat_screen.dart';
 import 'package:chewata/screen/home_screen.dart';
 import 'package:chewata/screen/onboarding/onboarding.dart';
 import 'package:chewata/services/auth_service.dart';
@@ -27,11 +29,23 @@ class App extends StatelessWidget {
       darkTheme: TAppTheme.darkTheme,
       initialRoute: '/',
       getPages: [
-        GetPage(name: '/', page: () => _determineInitialScreen()),
-        GetPage(name: '/onboarding', page: () => const OnBoardingScreen()),
-        GetPage(name: '/auth', page: () => const AuthScreen()),
-        GetPage(name: '/home', page: () => const HomeScreen()),
-      ],
+  GetPage(name: '/', page: () => _determineInitialScreen()),
+  GetPage(name: '/onboarding', page: () => const OnBoardingScreen()),
+  GetPage(name: '/auth', page: () => const AuthScreen()),
+  GetPage(name: '/home', page: () => const HomeScreen()),
+  GetPage(
+    name: '/chat/:chatId',
+    page: () {
+      final chatId = Get.parameters['chatId']!;
+      return ChatScreen(chatId: chatId);
+    },
+    binding: BindingsBuilder(() {
+      if (!Get.isRegistered<ChatController>()) {
+        Get.put(ChatController());
+      }
+    }),
+  ),
+],
     ));
   }
   
