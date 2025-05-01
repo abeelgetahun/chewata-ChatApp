@@ -95,6 +95,33 @@ class _AuthScreenState extends State<AuthScreen> {
               },
             ),
           ),
+          // Guest login button
+          Positioned(
+            bottom: 20,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  _authController.continueAsGuest();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[700],
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Continue as Guest',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
