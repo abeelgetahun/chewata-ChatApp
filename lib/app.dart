@@ -32,23 +32,23 @@ class App extends StatelessWidget {
       darkTheme: TAppTheme.darkTheme,
       initialRoute: '/',
       getPages: [
-      GetPage(name: '/', page: () => _determineInitialScreen()),
-      GetPage(name: '/onboarding', page: () => const OnBoardingScreen()),
-      GetPage(name: '/auth', page: () => const AuthScreen()),
-      GetPage(name: '/home', page: () => const HomeScreen()),
-      GetPage(
-            name: '/chat/:chatId',
-            page: () {
-              final chatId = Get.parameters['chatId']!;
-              return ChatScreen(chatId: chatId);
-            },
-            binding: BindingsBuilder(() {
-              if (!Get.isRegistered<ChatController>()) {
-                Get.put(ChatController());
-              }
-            }),
-          ),
-    ],
+    GetPage(name: '/', page: () => _determineInitialScreen()),
+    GetPage(name: '/onboarding', page: () => const OnBoardingScreen()),
+    GetPage(name: '/auth', page: () => const AuthScreen()),
+    GetPage(name: '/home', page: () => const HomeScreen()),
+    GetPage(
+          name: '/chat/:chatId',
+          page: () {
+            final chatId = Get.parameters['chatId']!;
+            return ChatScreen(chatId: chatId);
+          },
+          binding: BindingsBuilder(() {
+            if (!Get.isRegistered<ChatController>()) {
+              Get.put(ChatController());
+            }
+          }),
+        ),
+  ],
     ));
   }
   
