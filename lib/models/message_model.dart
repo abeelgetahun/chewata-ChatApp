@@ -1,6 +1,5 @@
 // lib/models/message_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 class MessageModel {
   final String id;
   final String chatId;
@@ -8,7 +7,8 @@ class MessageModel {
   final String text;
   final DateTime sentAt;
   final bool isRead;
-  final Map<String, dynamic>? metadata; // For future extensions (like attachments)
+  final bool isDelivered; // Add this field
+  final Map<String, dynamic>? metadata;
 
   MessageModel({
     required this.id,
@@ -17,6 +17,7 @@ class MessageModel {
     required this.text,
     required this.sentAt,
     required this.isRead,
+    this.isDelivered = false, // Default to false
     this.metadata,
   });
 
@@ -27,6 +28,7 @@ class MessageModel {
       'text': text,
       'sentAt': sentAt,
       'isRead': isRead,
+      'isDelivered': isDelivered,
       'metadata': metadata,
     };
   }
@@ -39,6 +41,7 @@ class MessageModel {
       text: map['text'],
       sentAt: (map['sentAt'] as Timestamp).toDate(),
       isRead: map['isRead'] ?? false,
+      isDelivered: map['isDelivered'] ?? false,
       metadata: map['metadata'],
     );
   }
