@@ -32,16 +32,27 @@ class ChatModel {
   }
 
   factory ChatModel.fromMap(Map<String, dynamic> map, String documentId) {
-    return ChatModel(
-      id: documentId,
-      participants: List<String>.from(map['participants'] ?? []),
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      lastMessageTime: map['lastMessageTime'] != null 
-          ? (map['lastMessageTime'] as Timestamp).toDate() 
-          : null,
-      lastMessageText: map['lastMessageText'],
-      lastMessageSenderId: map['lastMessageSenderId'],
-      unreadCount: Map<String, int>.from(map['unreadCount'] ?? {}),
-    );
+    try {
+      return ChatModel(
+        id: documentId,
+        participants: List<String>.from(map['participants'] ?? []),
+        createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        lastMessageTime: map['lastMessageTime'] != null 
+            ? (map['lastMessageTime'] as Timestamp).toDate() 
+            : null,
+        lastMessageText: map['lastMessageText'],
+        lastMessageSenderId: map['lastMessageSenderId'],
+        unreadCount: Map<String, int>.from(map['unreadCount'] ?? {}),
+      );
+    } catch (e) {
+      print('Error parsing ChatModel from map: $e');
+      // Return a fallback model
+      return ChatModel(
+        id: documentId,
+        participants: [],
+        createdAt: DateTime.now(),
+        unreadCount: {},
+      );
+    }
   }
 }
