@@ -129,20 +129,38 @@ class ChatController extends GetxController {
   }
   
   // Load messages for a specific chat
+    
   void loadChatMessages(String chatId) {
     isLoadingMessages.value = true;
     selectedChatId.value = chatId;
     
-    // Mark chat as read
-    _chatService.markChatAsRead(chatId);
+    // Get the chat to find the other user's ID
+    final chat = userChats.firstWhere(
+      (c) => c.id == chatId,
+      orElse: () => null as dynamic,
+    );
     
-    // Subscribe to messages stream
-    _chatService.getChatMessages(chatId).listen((messages) {
-      currentChatMessages.value = messages;
-      isLoadingMessages.value = false;
-    });
-  }
+    if (chat != null) {
+      final otherUserId = chat.participants.firstWhere(
+        (id) => id != _authService.firebaseUser.value?.uid,
+        orElse: () => '',
+      );
+      
+      // Mark messages from other user as delivered when opening the chat
+      if (otherUserId.isNotEmpty) {
+        _chatService.markMessagesAsDelivered(chatId, otherUserId);
+      }
+    }
   
+  // Mark chat as read
+  _chatService.markChatAsRead(chatId);
+  
+  // Subscribe to messages stream
+  _chatService.getChatMessages(chatId).listen((messages) {
+    currentChatMessages.value = messages;
+    isLoadingMessages.value = false;
+  });
+}
   // Send a message
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty || selectedChatId.value.isEmpty) return;

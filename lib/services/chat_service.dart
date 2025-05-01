@@ -152,6 +152,7 @@ class ChatService extends GetxService {
   }
   
   // Send a message
+  // In chat_service.dart, modify the sendMessage method
   Future<bool> sendMessage(String chatId, String text) async {
     try {
       if (currentUserId == null) {
@@ -178,10 +179,11 @@ class ChatService extends GetxService {
         text: text,
         sentAt: DateTime.now(),
         isRead: false,
+        isDelivered: false, // Initialize as not delivered
       );
       
       // Add message to subcollection
-      await _chatsCollection
+      final messageRef = await _chatsCollection
           .doc(chatId)
           .collection('messages')
           .add(message.toMap());
@@ -209,8 +211,34 @@ class ChatService extends GetxService {
       return false;
     }
   }
-  
-  // Mark messages as read
+
+  // Add this new method to mark messages as delivered
+  Future<void> markMessagesAsDelivered(String chatId, String senderId) async {
+    try {
+      if (currentUserId == null) return;
+      
+      // Only mark other user's messages as delivered
+      if (currentUserId == senderId) return;
+      
+      final batch = _db.batch();
+      final messagesSnapshot = await _chatsCollection
+          .doc(chatId)
+          .collection('messages')
+          .where('senderId', isEqualTo: senderId)
+          .where('isDelivered', isEqualTo: false)
+          .get();
+      
+      for (final doc in messagesSnapshot.docs) {
+        batch.update(doc.reference, {'isDelivered': true});
+      }
+      
+      await batch.commit();
+    } catch (e) {
+      print('Error marking messages as delivered: $e');
+    }
+  }
+
+  // Modify the markChatAsRead method
   Future<void> markChatAsRead(String chatId) async {
     try {
       if (currentUserId == null) return;
@@ -230,17 +258,24 @@ class ChatService extends GetxService {
         'unreadCount': unreadCount,
       });
       
-      // Mark individual messages as read
+      // Mark individual messages as read and delivered
       final batch = _db.batch();
       final messagesSnapshot = await _chatsCollection
           .doc(chatId)
           .collection('messages')
-          .where('isRead', isEqualTo: false)
           .where('senderId', isNotEqualTo: currentUserId)
           .get();
       
       for (final doc in messagesSnapshot.docs) {
-        batch.update(doc.reference, {'isRead': true});
+        final data = doc.data();
+        
+        if (data['isRead'] == false) {
+          batch.update(doc.reference, {'isRead': true});
+        }
+        
+        if (data['isDelivered'] == false) {
+          batch.update(doc.reference, {'isDelivered': true});
+        }
       }
       
       await batch.commit();
@@ -248,8 +283,8 @@ class ChatService extends GetxService {
       print('Error marking chat as read: $e');
     }
   }
-  
-  // Get user info for chat participants
+
+ // Get user info for chat participants
   Future<UserModel?> getUserInfo(String userId) async {
     try {
       final doc = await _usersCollection.doc(userId).get();
