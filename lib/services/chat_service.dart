@@ -109,18 +109,28 @@ class ChatService extends GetxService {
     if (currentUserId == null) {
       return Stream.value([]);
     }
-    
+
     return _chatsCollection
         .where('participants', arrayContains: currentUserId!)
         .orderBy('lastMessageTime', descending: true)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            return ChatModel.fromMap(
-              doc.data() as Map<String, dynamic>,
-              doc.id
-            );
-          }).toList();
+          try {
+            if (snapshot.docs.isEmpty) {
+              print('No chats found for user $currentUserId');
+              return [];
+            }
+            
+            return snapshot.docs.map((doc) {
+              // Add logging to help debug
+              print('Processing chat: ${doc.id}');
+              final data = doc.data() as Map<String, dynamic>;
+              return ChatModel.fromMap(data, doc.id);
+            }).toList();
+          } catch (e) {
+            print('Error processing chat documents: $e');
+            return [];
+          }
         });
   }
   
