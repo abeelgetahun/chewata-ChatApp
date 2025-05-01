@@ -1,87 +1,87 @@
-📱 Flutter Chat App
-An end-to-end real-time chat application built with Flutter. This app includes full authentication features like Sign Up, Sign In, and Sign Out, along with real-time messaging, user status updates, and a clean UI powered by Flutter.
+# 📱 Flutter Chat App
 
-🚀 Features
-🔐 User Authentication (Email & Password)
+An end-to-end real-time chat application built with Flutter. This app includes full authentication features like **Sign Up**, **Sign In**, and **Sign Out**, along with **real-time messaging**, **user status updates**, and a clean UI powered by Flutter.
 
-Sign Up
+---
 
-Sign In
+## 🚀 Features
 
-Sign Out
+### 🔐 User Authentication (Email & Password)
+- Sign Up  
+- Sign In  
+- Sign Out  
 
-💬 Real-Time Chat
+### 💬 Real-Time Chat
+- Send & receive messages instantly  
+- User presence/status updates (online/offline)
 
-Send & receive messages instantly
+### 🧑‍🤝‍🧑 Contact List
+- View all registered users  
+- Start 1-on-1 chats  
 
-User presence/status updates (online/offline)
+### 📲 Responsive UI
+- Smooth experience on both Android and iOS  
 
-🧑‍🤝‍🧑 Contact List
+---
 
-View all registered users
+## 🛠️ Tech Stack
 
-Start 1-on-1 chats
+- **Frontend:** Flutter (Dart)  
+- **Backend:** Firebase (Authentication, Firestore, Realtime Database or Cloud Functions)  
+- **State Management:** Provider / Riverpod / Bloc *(choose based on your implementation)*  
+- **Push Notifications:** Firebase Cloud Messaging *(optional)*  
 
-📲 Responsive UI
+---
 
-Smooth experience on both Android and iOS
+## 📦 Getting Started
 
-🛠️ Tech Stack
-Frontend: Flutter (Dart)
+### 1. Clone the repository
 
-Backend: Firebase (Authentication, Firestore, Realtime Database or Cloud Functions)
-
-State Management: Provider / Riverpod / Bloc (choose based on your implementation)
-
-Push Notifications: Firebase Cloud Messaging (optional)
-
-📦 Getting Started
-1. Clone the repository
-
+```bash
 git clone https://github.com/your-username/flutter-chat-app.git
 cd flutter-chat-app
-2. Install dependencies
+```
 
+### 2. Install dependencies
+
+```bash
 flutter pub get
-3. Set up Firebase
-Go to Firebase Console
+```
 
-Create a new project.
+### 3. Set up Firebase
 
-Add Android/iOS app to the project.
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Create a new project
+3. Add Android/iOS app to the project
+4. Download `google-services.json` *(for Android)* or `GoogleService-Info.plist` *(for iOS)* and place them in the appropriate directories
+5. Enable **Email/Password** authentication
+6. Set up **Cloud Firestore** for real-time messaging
 
-Download google-services.json (for Android) or GoogleService-Info.plist (for iOS) and place them in respective directories.
+### 4. Run the app
 
-Enable Email/Password authentication.
-
-Set up Cloud Firestore for real-time messaging.
-
-4. Run the app
-
+```bash
 flutter run
-📸 Screenshots
-Sign In	Chat Screen	Contact List
+```
 
-📁 Project Structure
-arduino
-lib/
-├── main.dart
-├── models/
-├── screens/
-│   ├── auth/
-│   ├── chat/
-│   └── home/
-├── services/
-├── widgets/
-└── utils/
-✅ TODOs
- Group chats
+---
 
- Push notifications
+## 📸 Screenshots
 
- Message read receipts
+| Sign In | Chat Screen | Contact List |
+|--------|-------------|--------------|
+| ![Sign In](screenshots/signin.png) | ![Chat](screenshots/chat.png) | ![Contacts](screenshots/contacts.png) |
 
- User profile customization
+---
 
-📄 License
-This project is licensed under the MIT License.
+## ✅ TODOs
+
+- [ ] Group chats  
+- [ ] Push notifications  
+- [ ] Message read receipts  
+- [ ] User profile customization  
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
