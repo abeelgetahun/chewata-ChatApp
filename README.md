@@ -1,6 +1,9 @@
 # chewata
 
 A new Flutter project.
+##Documentation
+for detail documentation and project overview, visit
+**[Chewat Documentation on Deepwiki**]https://deepwiki.com/biniam0/Chewata
 
 ## Getting Started
 
