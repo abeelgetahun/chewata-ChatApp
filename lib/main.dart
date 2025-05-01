@@ -7,6 +7,9 @@ import 'firebase_options.dart';
 import 'package:chewata/app.dart';
 
 void main() async {
+  //test from abrsh
+
+  
   // Ensure Flutter bindings are initialized in the same zone
   WidgetsFlutterBinding.ensureInitialized();
 
