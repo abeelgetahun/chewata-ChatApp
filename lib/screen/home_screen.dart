@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:chewata/controller/auth_controller.dart';
 import 'package:chewata/controller/navigation_controller.dart';
 import 'package:chewata/controller/theme_controller.dart';
+import 'package:chewata/controller/chat_controller.dart';
 import 'package:chewata/services/auth_service.dart';
 import 'package:chewata/screen/connect_screen.dart';
 import 'package:chewata/screen/fun_screen.dart';
@@ -29,6 +30,11 @@ class HomeScreen extends StatelessWidget {
       Get.put(NavigationController());
     }
     final NavigationController navigationController = Get.find<NavigationController>();
+
+    // Initialize chat controller if not already done
+    if (!Get.isRegistered<ChatController>()) {
+      Get.put(ChatController());
+    }
 
     // Define the screens for each tab
     final List<Widget> screens = [
