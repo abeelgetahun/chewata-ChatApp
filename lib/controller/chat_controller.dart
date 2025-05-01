@@ -25,15 +25,27 @@ class ChatController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Subscribe to user chats stream when controller is initialized
-    _listenToUserChats();
+    
+    // Only listen to chats when user is authenticated
+    _authService.userModel.listen((user) {
+      if (user != null) {
+        _listenToUserChats();
+      } else {
+        // Clear data when user logs out
+        userChats.clear();
+        chatUsers.clear();
+        selectedChatId.value = '';
+        currentChatMessages.clear();
+      }
+    });
   }
   
   // Listen for user chats
   void _listenToUserChats() {
     _chatService.getUserChats().listen((chats) {
       userChats.value = chats;
-      // Load user info for each chat
+
+      // Load user info for each chat participant
       for (final chat in chats) {
         _loadChatUsers(chat);
       }
@@ -183,4 +195,13 @@ class ChatController extends GetxController {
     currentChatMessages.clear();
     super.onClose();
   }
+
+
+  // Add to ChatController class
+void refreshChats() {
+  print("Manually refreshing chats for user: ${currentUser?.id}");
+  userChats.clear();
+  chatUsers.clear();
+  _listenToUserChats();
+}
 }
