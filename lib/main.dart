@@ -9,7 +9,7 @@ import 'package:chewata/app.dart';
 void main() async {
   //test from abrsh
   // test 2
-
+  // test 3
 
   // Ensure Flutter bindings are initialized in the same zone
   WidgetsFlutterBinding.ensureInitialized();
