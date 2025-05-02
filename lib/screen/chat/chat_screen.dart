@@ -167,7 +167,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final currentUserId = _chatController.currentUser?.id;
     final isCurrentUser = message.senderId == currentUserId;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
@@ -175,7 +175,7 @@ class _ChatScreenState extends State<ChatScreen> {
             isCurrentUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           if (!isCurrentUser) const SizedBox(width: 8),
-          
+
           // Message bubble
           Flexible(
             child: Container(
@@ -186,7 +186,7 @@ class _ChatScreenState extends State<ChatScreen> {
               decoration: BoxDecoration(
                 color: isCurrentUser
                     ? Theme.of(context).primaryColor
-                    : isDarkMode 
+                    : isDarkMode
                         ? Colors.grey[800]
                         : Colors.grey[300],
                 borderRadius: BorderRadius.only(
@@ -209,36 +209,40 @@ class _ChatScreenState extends State<ChatScreen> {
                     style: TextStyle(
                       color: isCurrentUser
                           ? Colors.white
-                          : isDarkMode 
+                          : isDarkMode
                               ? Colors.white
                               : Colors.black,
                     ),
                   ),
-                  
+
                   // Time and read status
                   const SizedBox(height: 4),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Display message time
                       Text(
                         DateFormat.Hm().format(message.sentAt),
                         style: TextStyle(
                           fontSize: 11,
                           color: isCurrentUser
                               ? Colors.white.withOpacity(0.7)
-                              : isDarkMode 
+                              : isDarkMode
                                   ? Colors.grey[400]
                                   : Colors.grey[700],
                         ),
                       ),
                       if (isCurrentUser) ...[
                         const SizedBox(width: 4),
+                        // Show appropriate checkmark based on message status
                         Icon(
-                          message.isRead ? Icons.done_all : Icons.done,
+                          message.isRead
+                              ? Icons.done_all // Double checkmark for "seen"
+                              : Icons.done, // Single checkmark for "delivered"
                           size: 14,
                           color: message.isRead
-                              ? Colors.white.withOpacity(0.7)
-                              : Colors.white.withOpacity(0.4),
+                              ? Colors.blue // Blue for "seen"
+                              : Colors.white.withOpacity(0.7), // Grey for "delivered"
                         ),
                       ],
                     ],
@@ -247,12 +251,10 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           ),
-          
+
           if (isCurrentUser) const SizedBox(width: 8),
         ],
       ),
     );
   }
-
-
 }
