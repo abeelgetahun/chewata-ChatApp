@@ -1,5 +1,15 @@
 # 📱 Flutter Chat App
 
+
+<<<<<<< main
+An end-to-end real-time chat application built with Flutter. This app includes full authentication features like **Sign Up**, **Sign In**, and **Sign Out**, along with **real-time messaging**, **user status updates**, and a clean UI powered by Flutter.
+=======
+A new Flutter project.
+##Documentation
+for detail documentation and project overview, visit
+**[Chewat Documentation on Deepwiki**]https://deepwiki.com/biniam0/Chewata
+>>>>>>> master
+
 An end-to-end real-time chat application built with Flutter. This app includes full authentication features like **Sign Up**, **Sign In**, and **Sign Out**, along with **real-time messaging**, **user status updates**, and a clean UI powered by Flutter.
 
 ---
