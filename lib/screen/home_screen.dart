@@ -47,87 +47,101 @@ class HomeScreen extends StatelessWidget {
     // PageController for PageView
     final PageController pageController = PageController();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Chewata',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDarkMode
+              ? [Colors.black, Colors.grey[900]!]
+              : [Colors.white, Colors.grey[200]!],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
-        centerTitle: false,
-        actions: [
-          IconButton(
-            onPressed: () {
-              // Show theme selection dialog
-              _showThemeSelectionDialog(context, themeController);
-            },
-            icon: _buildAppBarIcon('assets/icons/dark_mode.svg', isDarkMode),
-          ),
-          const SizedBox(width: 12),
-          IconButton(
-            onPressed: () {
-              // Navigate to Search screen or show search bar
-            },
-            icon: _buildAppBarIcon('assets/icons/search.svg', isDarkMode),
-          ),
-          const SizedBox(width: 12),
-          IconButton(
-            onPressed: () {
-              // Your logout logic here
-              AuthService.instance.logout();
-            },
-            icon: _buildAppBarIcon('assets/icons/logout.svg', isDarkMode),
-          ),
-        ],
       ),
-      body: PageView(
-        controller: pageController,
-        onPageChanged: (index) {
-          // Update the selected index in the NavigationController
-          navigationController.changeIndex(index);
-        },
-        children: screens,
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: isDarkMode ? Colors.grey[900] : Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+      child: Scaffold(
+        backgroundColor: Colors.transparent, // Transparent to show the gradient
+        appBar: AppBar(
+          backgroundColor: Colors.transparent, // Transparent app bar
+          elevation: 0, // Remove shadow
+          title: const Text(
+            'Chewata',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+            ),
+          ),
+          centerTitle: false,
+          actions: [
+            IconButton(
+              onPressed: () {
+                // Show theme selection dialog
+                _showThemeSelectionDialog(context, themeController);
+              },
+              icon: _buildAppBarIcon('assets/icons/dark_mode.svg', isDarkMode),
+            ),
+            const SizedBox(width: 12),
+            IconButton(
+              onPressed: () {
+                // Navigate to Search screen or show search bar
+              },
+              icon: _buildAppBarIcon('assets/icons/search.svg', isDarkMode),
+            ),
+            const SizedBox(width: 12),
+            IconButton(
+              onPressed: () {
+                // Your logout logic here
+                AuthService.instance.logout();
+              },
+              icon: _buildAppBarIcon('assets/icons/logout.svg', isDarkMode),
             ),
           ],
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-            child: Obx(() => GNav(
-              selectedIndex: navigationController.selectedIndex.value,
-              onTabChange: (index) {
-                // Navigate to the selected page in the PageView
-                pageController.jumpToPage(index);
-              },
-              rippleColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-              hoverColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
-              gap: 8,
-              activeColor: isDarkMode ? Colors.white : Colors.black,
-              iconSize: 24,
-              tabActiveBorder: Border.all(color: Colors.black, width: 1),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              duration: const Duration(milliseconds: 400),
-              tabBackgroundColor: isDarkMode ? Colors.grey[800]! : Colors.grey[100]!,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-              tabs: [
-                _buildNavItem('chewata', 'assets/icons/home_chewata_nav.svg', isDarkMode),
-                _buildNavItem('connect', 'assets/icons/home_connect_nav.svg', isDarkMode),
-                _buildNavItem('fun', 'assets/icons/home_fun_nav.svg', isDarkMode),
-                _buildNavItem('account', 'assets/icons/home_account_nav.svg', isDarkMode),
-              ],
-            )),
+        body: PageView(
+          controller: pageController,
+          onPageChanged: (index) {
+            // Update the selected index in the NavigationController
+            navigationController.changeIndex(index);
+          },
+          children: screens,
+        ),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: isDarkMode ? Colors.black : Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+              child: Obx(() => GNav(
+                selectedIndex: navigationController.selectedIndex.value,
+                onTabChange: (index) {
+                  // Navigate to the selected page in the PageView
+                  pageController.jumpToPage(index);
+                },
+                rippleColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+                hoverColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
+                gap: 8,
+                activeColor: isDarkMode ? Colors.white : Colors.black,
+                iconSize: 24,
+                tabActiveBorder: isDarkMode ? Border.all(color: Colors.white, width: 1) : Border.all(color: Colors.black, width: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                duration: const Duration(milliseconds: 400),
+                tabBackgroundColor: isDarkMode ? Colors.black : Colors.white,
+                color: isDarkMode ? Colors.black : Colors.white,
+                tabs: [
+                  _buildNavItem('chewata', 'assets/icons/home_chewata_nav.svg', isDarkMode),
+                  _buildNavItem('connect', 'assets/icons/home_connect_nav.svg', isDarkMode),
+                  _buildNavItem('fun', 'assets/icons/home_fun_nav.svg', isDarkMode),
+                  _buildNavItem('account', 'assets/icons/home_account_nav.svg', isDarkMode),
+                ],
+              )),
+            ),
           ),
         ),
       ),
