@@ -1,3 +1,4 @@
+// This is imported file
 import 'package:flutter/material.dart';
 import 'package:chewata/screen/auth/login_form.dart';
 import 'package:chewata/screen/auth/signup_form.dart';
@@ -24,7 +25,7 @@ class _AuthScreenState extends State<AuthScreen> {
     } else {
       _authController.clearLoginForm();
     }
-    
+
     setState(() {
       _showLogin = !_showLogin;
     });
@@ -46,11 +47,14 @@ class _AuthScreenState extends State<AuthScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 // Calculate the maximum height available for the blurred box
-                final maxHeight = constraints.maxHeight - 60; // 30 padding from top and bottom
+                final maxHeight =
+                    constraints.maxHeight -
+                    60; // 30 padding from top and bottom
                 final boxHeight = _showLogin ? 400.0 : 500.0;
 
                 // Ensure the box height does not exceed the available height
-                final adjustedHeight = boxHeight > maxHeight ? maxHeight : boxHeight;
+                final adjustedHeight =
+                    boxHeight > maxHeight ? maxHeight : boxHeight;
 
                 return Center(
                   child: AnimatedContainer(
@@ -74,15 +78,16 @@ class _AuthScreenState extends State<AuthScreen> {
                             ),
                           );
                         },
-                        child: _showLogin
-                            ? LoginForm(
-                                key: const ValueKey('LoginForm'),
-                                onSwitchToSignUp: _toggleView,
-                              )
-                            : SignupForm(
-                                key: const ValueKey('SignupForm'),
-                                onSwitchToLogin: _toggleView,
-                              ),
+                        child:
+                            _showLogin
+                                ? LoginForm(
+                                  key: const ValueKey('LoginForm'),
+                                  onSwitchToSignUp: _toggleView,
+                                )
+                                : SignupForm(
+                                  key: const ValueKey('SignupForm'),
+                                  onSwitchToLogin: _toggleView,
+                                ),
                       ),
                     ),
                   ),
@@ -90,11 +95,38 @@ class _AuthScreenState extends State<AuthScreen> {
               },
             ),
           ),
+          // Guest login button
+          Positioned(
+            bottom: 20,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  _authController.continueAsGuest();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[700],
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Continue as Guest',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
-  
+
   @override
   void dispose() {
     // Ensure we clear all sensitive data when this screen is disposed

@@ -7,6 +7,12 @@ import 'firebase_options.dart';
 import 'package:chewata/app.dart';
 
 void main() async {
+  //test from abrsh
+  // test ake
+  //
+  // test 2
+  // test 3
+
   // Ensure Flutter bindings are initialized in the same zone
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -14,15 +20,16 @@ void main() async {
   await dotenv.load(fileName: ".env");
 
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Set up global error handling
-  runZonedGuarded(() {
-    runApp(const App());
-  }, (error, stackTrace) {
-    debugPrint('Uncaught Error: $error');
-    debugPrint('Stack Trace: $stackTrace');
-  });
+  runZonedGuarded(
+    () {
+      runApp(const App());
+    },
+    (error, stackTrace) {
+      debugPrint('Uncaught Error: $error');
+      debugPrint('Stack Trace: $stackTrace');
+    },
+  );
 }
