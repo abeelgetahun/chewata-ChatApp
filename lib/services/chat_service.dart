@@ -242,42 +242,38 @@ class ChatService extends GetxService {
   Future<void> markChatAsRead(String chatId) async {
     try {
       if (currentUserId == null) return;
-      
+
       // Get chat document
       final chatDoc = await _chatsCollection.doc(chatId).get();
       if (!chatDoc.exists) return;
-      
+
       final chatData = chatDoc.data() as Map<String, dynamic>;
       final unreadCount = Map<String, int>.from(chatData['unreadCount'] ?? {});
-      
+
       // Reset unread count for current user
       unreadCount[currentUserId!] = 0;
-      
+
       // Update chat document
       await _chatsCollection.doc(chatId).update({
         'unreadCount': unreadCount,
       });
-      
-      // Mark individual messages as read and delivered
+
+      // Mark individual messages as read
       final batch = _db.batch();
       final messagesSnapshot = await _chatsCollection
           .doc(chatId)
           .collection('messages')
           .where('senderId', isNotEqualTo: currentUserId)
+          .where('isRead', isEqualTo: false)
           .get();
-      
+
       for (final doc in messagesSnapshot.docs) {
-        final data = doc.data();
-        
-        if (data['isRead'] == false) {
-          batch.update(doc.reference, {'isRead': true});
-        }
-        
-        if (data['isDelivered'] == false) {
-          batch.update(doc.reference, {'isDelivered': true});
-        }
+        batch.update(doc.reference, {
+          'isRead': true,
+          'readBy': FieldValue.arrayUnion([currentUserId!]),
+        });
       }
-      
+
       await batch.commit();
     } catch (e) {
       print('Error marking chat as read: $e');
