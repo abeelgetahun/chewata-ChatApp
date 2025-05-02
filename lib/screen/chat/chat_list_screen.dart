@@ -16,110 +16,122 @@ class ChatListScreen extends StatelessWidget {
     final ChatController chatController = Get.find<ChatController>();
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      body: Column(
-        children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search for a user by email',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              ),
-              onSubmitted: (value) {
-                chatController.searchUserByEmail(value);
-              },
-            ),
-          ),
-          
-          // Search results
-          Obx(() {
-            if (chatController.isSearching.value) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            
-            if (chatController.searchedUser.value != null) {
-              final user = chatController.searchedUser.value!;
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  child: Text(
-                    user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : 'U',
-                    style: const TextStyle(color: Colors.white),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDarkMode
+              ? [Colors.black, Colors.grey[900]!]
+              : [Colors.white, Colors.grey[200]!],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent, // Make Scaffold background transparent
+        body: Column(
+          children: [
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search for a user by email',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
                   ),
+                  filled: true,
+                  fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
                 ),
-                title: Text(user.fullName),
-                subtitle: Text(user.email),
-                trailing: ElevatedButton(
-                  onPressed: () {
-                    chatController.createOrGetChatWithUser(user.id);
-                  },
-                  child: Obx(() => chatController.isLoading.value
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Chat')),
-                ),
-              );
-            }
+                onSubmitted: (value) {
+                  chatController.searchUserByEmail(value);
+                },
+              ),
+            ),
             
-            return const SizedBox.shrink();
-          }),
-          
-          // Chat list
-          Expanded(
-            child: Obx(() {
-              if (chatController.userChats.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.chat_bubble_outline,
-                        size: 64,
-                        color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No chats yet',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Search for a user to start chatting',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDarkMode ? Colors.grey[500] : Colors.grey[700],
-                        ),
-                      ),
-                    ],
+            // Search results
+            Obx(() {
+              if (chatController.isSearching.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              
+              if (chatController.searchedUser.value != null) {
+                final user = chatController.searchedUser.value!;
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    child: Text(
+                      user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : 'U',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  title: Text(user.fullName),
+                  subtitle: Text(user.email),
+                  trailing: ElevatedButton(
+                    onPressed: () {
+                      chatController.createOrGetChatWithUser(user.id);
+                    },
+                    child: Obx(() => chatController.isLoading.value
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Chat')),
                   ),
                 );
               }
               
-              return ListView.builder(
-                itemCount: chatController.userChats.length,
-                itemBuilder: (context, index) {
-                  final chat = chatController.userChats[index];
-                  return _buildChatTile(context, chat, chatController);
-                },
-              );
+              return const SizedBox.shrink();
             }),
-          ),
-        ],
+            
+            // Chat list
+            Expanded(
+              child: Obx(() {
+                if (chatController.userChats.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 64,
+                          color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No chats yet',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Search for a user to start chatting',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDarkMode ? Colors.grey[500] : Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                return ListView.builder(
+                  itemCount: chatController.userChats.length,
+                  itemBuilder: (context, index) {
+                    final chat = chatController.userChats[index];
+                    return _buildChatTile(context, chat, chatController);
+                  },
+                );
+              }),
+            ),
+          ],
+        ),
       ),
     );
   }
