@@ -20,8 +20,8 @@ class ChatListScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDarkMode
-              ? [Colors.black, Colors.grey[900]!]
-              : [Colors.white, Colors.grey[200]!],
+              ? [Colors.black, Colors.black]
+              : [Colors.white, Colors.white],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),

@@ -132,7 +132,7 @@ class HomeScreen extends StatelessWidget {
                 tabActiveBorder: isDarkMode ? Border.all(color: Colors.white, width: 1) : Border.all(color: Colors.black, width: 1),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 duration: const Duration(milliseconds: 400),
-                tabBackgroundColor: isDarkMode ? Colors.black : Colors.white,
+                tabBackgroundColor: Colors.transparent,
                 color: isDarkMode ? Colors.black : Colors.white,
                 tabs: [
                   _buildNavItem('chewata', 'assets/icons/home_chewata_nav.svg', isDarkMode),
