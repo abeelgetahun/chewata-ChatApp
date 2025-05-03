@@ -1,4 +1,5 @@
 import 'package:chewata/screen/chat/chat_list_screen.dart';
+import 'package:chewata/screen/chat/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
@@ -30,6 +31,9 @@ class HomeScreen extends StatelessWidget {
       Get.put(NavigationController());
     }
     final NavigationController navigationController = Get.find<NavigationController>();
+
+    // Ensure the default tab is Chewata
+    navigationController.changeIndex(0);
 
     // Initialize chat controller if not already done
     if (!Get.isRegistered<ChatController>()) {
@@ -82,6 +86,8 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(width: 12),
             IconButton(
               onPressed: () {
+                // Navigate to Search screen
+                Get.to(() => SearchScreen());
                 // Navigate to Search screen or show search bar
               },
               icon: _buildAppBarIcon('assets/icons/search.svg', isDarkMode),
