@@ -58,8 +58,8 @@ class SearchScreen extends StatelessWidget {
                   // Wait for the chat to be created and get its ID
                   final chatId = _chatController.selectedChatId.value;
                   if (chatId.isNotEmpty) {
-                    // Navigate directly to the chat screen
-                    Get.offAllNamed('/chat/$chatId');
+                    // Navigate directly to the chat screen without clearing the entire stack
+                    Get.toNamed('/chat/$chatId');
                   }
                 } catch (e) {
                   Get.snackbar('Error', 'Failed to start chat');
