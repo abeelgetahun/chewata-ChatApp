@@ -239,46 +239,52 @@ class ChatService extends GetxService {
   }
 
   // Modify the markChatAsRead method
-  Future<void> markChatAsRead(String chatId) async {
-    try {
-      if (currentUserId == null) return;
+  // Improve the markChatAsRead method in ChatService class
+Future<void> markChatAsRead(String chatId) async {
+  try {
+    if (currentUserId == null) return;
 
-      // Get chat document
-      final chatDoc = await _chatsCollection.doc(chatId).get();
-      if (!chatDoc.exists) return;
+    // Get chat document
+    final chatDoc = await _chatsCollection.doc(chatId).get();
+    if (!chatDoc.exists) return;
 
-      final chatData = chatDoc.data() as Map<String, dynamic>;
-      final unreadCount = Map<String, int>.from(chatData['unreadCount'] ?? {});
+    final chatData = chatDoc.data() as Map<String, dynamic>;
+    final unreadCount = Map<String, int>.from(chatData['unreadCount'] ?? {});
 
-      // Reset unread count for current user
-      unreadCount[currentUserId!] = 0;
+    // If no unread messages for current user, no need to update
+    if ((unreadCount[currentUserId!] ?? 0) == 0) return;
 
-      // Update chat document
-      await _chatsCollection.doc(chatId).update({
-        'unreadCount': unreadCount,
-      });
+    // Reset unread count for current user
+    unreadCount[currentUserId!] = 0;
 
-      // Mark individual messages as read
+    // Update chat document
+    await _chatsCollection.doc(chatId).update({
+      'unreadCount': unreadCount,
+    });
+
+    // Only query messages that are actually unread
+    final messagesSnapshot = await _chatsCollection
+        .doc(chatId)
+        .collection('messages')
+        .where('senderId', isNotEqualTo: currentUserId)
+        .where('isRead', isEqualTo: false)
+        .get();
+
+    if (messagesSnapshot.docs.isNotEmpty) {
       final batch = _db.batch();
-      final messagesSnapshot = await _chatsCollection
-          .doc(chatId)
-          .collection('messages')
-          .where('senderId', isNotEqualTo: currentUserId)
-          .where('isRead', isEqualTo: false)
-          .get();
-
+      
       for (final doc in messagesSnapshot.docs) {
         batch.update(doc.reference, {
           'isRead': true,
-          'readBy': FieldValue.arrayUnion([currentUserId!]),
         });
       }
 
       await batch.commit();
-    } catch (e) {
-      print('Error marking chat as read: $e');
     }
+  } catch (e) {
+    print('Error marking chat as read: $e');
   }
+}
 
  // Get user info for chat participants
   Future<UserModel?> getUserInfo(String userId) async {
