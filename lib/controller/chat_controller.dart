@@ -103,19 +103,17 @@ class ChatController extends GetxController {
       final chat = await _chatService.createOrGetChat(userId);
       
       if (chat != null) {
-        // Select the chat and load messages
         selectedChatId.value = chat.id;
         loadChatMessages(chat.id);
         
-        // If it's a new chat, add it to the list
         if (!userChats.any((c) => c.id == chat.id)) {
           userChats.add(chat);
         }
         
-        // Clear searched user
-        searchedUser.value = null;
+        searchedUser.value = null; // Clear search state
         
-        // Navigate to chat screen
+        // Close search screen and navigate to chat
+        Get.until((route) => route.isFirst); // Return to home
         Get.toNamed('/chat/${chat.id}');
       } else {
         Get.snackbar('Error', 'Failed to create chat');
@@ -177,6 +175,7 @@ class ChatController extends GetxController {
   void clearSelectedChat() {
     selectedChatId.value = '';
     currentChatMessages.clear();
+    searchedUser.value = null; // Also clear search state
   }
   
   // Get chat partner's name for display
