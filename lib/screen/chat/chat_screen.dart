@@ -1,4 +1,6 @@
-// lib/screen/chat_screen.dart
+
+import 'dart:async';
+
 import 'package:chewata/screen/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -21,19 +23,43 @@ class _ChatScreenState extends State<ChatScreen> {
   final ChatController _chatController = Get.find<ChatController>();
   final ScrollController _scrollController = ScrollController();
   
-  @override
-  void initState() {
-    super.initState();
-    _chatController.loadChatMessages(widget.chatId);
-  }
-  
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-  
+  // Add to _ChatScreenState class
+    Timer? _seenCheckTimer;
+
+    @override
+    void initState() {
+      super.initState();
+      _chatController.loadChatMessages(widget.chatId);
+      
+      // Set up a timer to periodically mark messages as read
+      _seenCheckTimer = Timer.periodic(Duration(seconds: 3), (timer) {
+        if (_chatController.selectedChatId.value == widget.chatId) {
+          _chatController.markCurrentChatMessagesAsRead();
+        }
+      });
+    }
+
+    @override
+    void dispose() {
+      _seenCheckTimer?.cancel();
+      _messageController.dispose();
+      _scrollController.dispose();
+      super.dispose();
+    }
+
+    
+
+  // Add to _ChatScreenState class
+    @override
+    void didChangeDependencies() {
+      super.didChangeDependencies();
+      
+      // Mark messages as read whenever this screen is in focus
+      if (_chatController.selectedChatId.value == widget.chatId) {
+        _chatController.loadChatMessages(widget.chatId);
+      }
+    }
+      
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
