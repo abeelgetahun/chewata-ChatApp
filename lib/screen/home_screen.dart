@@ -86,9 +86,9 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(width: 12),
             IconButton(
               onPressed: () {
-                // Navigate to Search screen
-                Get.to(() => SearchScreen());
-                // Navigate to Search screen or show search bar
+                final ChatController chatController = Get.find<ChatController>();
+                chatController.searchedUser.value = null; // Clear previous search
+                Get.to(() => SearchScreen(), transition: Transition.rightToLeft);
               },
               icon: _buildAppBarIcon('assets/icons/search.svg', isDarkMode),
             ),
