@@ -43,9 +43,9 @@ class _ChatScreenState extends State<ChatScreen> {
         leading: BackButton(
           onPressed: () {
             final ChatController chatController = Get.find<ChatController>();
-            chatController.searchedUser.value = null;
-            chatController.clearSelectedChat();
-            Get.back(); // Use simple back navigation
+            chatController.searchedUser.value = null; // Clear search state
+            chatController.clearSelectedChat(); // Clear selected chat state
+            Get.back(); // Navigate back to the previous screen
           },
         ),
         title: Obx(() {
