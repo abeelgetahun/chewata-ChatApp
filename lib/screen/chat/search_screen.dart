@@ -52,8 +52,19 @@ class SearchScreen extends StatelessWidget {
             subtitle: Text(user.email),
             trailing: ElevatedButton(
               onPressed: () async {
-                await _chatController.createOrGetChatWithUser(user.id);
-                Get.back(); // Return to previous screen after creating/getting chat
+                try {
+                  await _chatController.createOrGetChatWithUser(user.id);
+                  
+                  // Wait for the chat to be created and get its ID
+                  final chatId = _chatController.selectedChatId.value;
+                  if (chatId.isNotEmpty) {
+                    // Navigate directly to the chat screen
+                    Get.offAllNamed('/chat/$chatId');
+                  }
+                } catch (e) {
+                  Get.snackbar('Error', 'Failed to start chat');
+                  print('Navigation error: $e');
+                }
               },
               child: Obx(() => _chatController.isLoading.value
                   ? const SizedBox(
