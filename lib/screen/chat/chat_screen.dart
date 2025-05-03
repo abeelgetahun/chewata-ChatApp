@@ -1,9 +1,11 @@
 // lib/screen/chat_screen.dart
+import 'package:chewata/screen/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:chewata/controller/chat_controller.dart';
 import 'package:chewata/models/message_model.dart';
 import 'package:intl/intl.dart';
+import 'package:chewata/screen/chat/chat_list_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -40,7 +42,10 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         leading: BackButton(
           onPressed: () {
-            Get.back();
+            // Reset the searched user and navigate back to ChatListScreen
+            final ChatController chatController = Get.find<ChatController>();
+            chatController.searchedUser.value = null;
+            Get.off(() => const HomeScreen());
           },
         ),
         title: Obx(() {
