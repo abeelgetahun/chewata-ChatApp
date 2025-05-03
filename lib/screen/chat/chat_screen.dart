@@ -42,10 +42,10 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         leading: BackButton(
           onPressed: () {
-            // Reset the searched user and navigate back to ChatListScreen
             final ChatController chatController = Get.find<ChatController>();
             chatController.searchedUser.value = null;
-            Get.off(() => const HomeScreen());
+            chatController.clearSelectedChat();
+            Get.back(); // Use simple back navigation
           },
         ),
         title: Obx(() {
