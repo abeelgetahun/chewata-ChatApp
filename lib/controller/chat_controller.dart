@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:chewata/models/chat_model.dart';
 import 'package:chewata/models/message_model.dart';
@@ -128,7 +130,7 @@ class ChatController extends GetxController {
   
   // Load messages for a specific chat
     
-  void loadChatMessages(String chatId) {
+  void loadChatMessagesWithAutoRead(String chatId) {
     isLoadingMessages.value = true;
     selectedChatId.value = chatId;
     
@@ -208,6 +210,7 @@ class ChatController extends GetxController {
   
   @override
   void onClose() {
+    _messagesSubscription?.cancel(); // Cancel the subscription
     selectedChatId.value = '';
     currentChatMessages.clear();
     super.onClose();
@@ -220,5 +223,71 @@ void refreshChats() {
   userChats.clear();
   chatUsers.clear();
   _listenToUserChats();
+}
+
+// Add to ChatController class properties
+StreamSubscription<List<MessageModel>>? _messagesSubscription;
+
+// Modify the loadChatMessages method
+void loadChatMessages(String chatId) {
+  isLoadingMessages.value = true;
+  selectedChatId.value = chatId;
+  
+  // Get the chat to find the other user's ID
+  final chat = userChats.firstWhere(
+    (c) => c.id == chatId,
+    orElse: () => null as dynamic,
+  );
+  
+  if (chat != null) {
+    final otherUserId = chat.participants.firstWhere(
+      (id) => id != _authService.firebaseUser.value?.uid,
+      orElse: () => '',
+    );
+    
+    // Mark messages from other user as delivered when opening the chat
+    if (otherUserId.isNotEmpty) {
+      _chatService.markMessagesAsDelivered(chatId, otherUserId);
+    }
+  }
+
+  // Mark chat as read initially
+  _chatService.markChatAsRead(chatId);
+  
+  // Cancel any existing subscription
+  _messagesSubscription?.cancel();
+  
+  // Subscribe to messages stream with auto-read functionality
+  _messagesSubscription = _chatService.getChatMessages(chatId).listen((messages) {
+    currentChatMessages.value = messages;
+    isLoadingMessages.value = false;
+    
+    // If we're in the chat and there are unread messages from other users, mark them as read
+    if (selectedChatId.value == chatId) {
+      _markNewMessagesAsRead(messages, chatId);
+    }
+  });
+}
+
+// Add this new method to mark new messages as read
+void _markNewMessagesAsRead(List<MessageModel> messages, String chatId) {
+  final userId = _authService.firebaseUser.value?.uid;
+  if (userId == null) return;
+  
+  // Check if there are any unread messages from other users
+  final hasUnreadMessages = messages.any((msg) => 
+    msg.senderId != userId && !msg.isRead);
+  
+  if (hasUnreadMessages) {
+    // Mark them as read
+    _chatService.markChatAsRead(chatId);
+  }
+}
+
+// Add the suggested method
+void markCurrentChatMessagesAsRead() {
+  if (selectedChatId.value.isNotEmpty) {
+    _chatService.markChatAsRead(selectedChatId.value);
+  }
 }
 }
