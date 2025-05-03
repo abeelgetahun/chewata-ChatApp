@@ -30,26 +30,6 @@ class ChatListScreen extends StatelessWidget {
         backgroundColor: Colors.transparent, // Make Scaffold background transparent
         body: Column(
           children: [
-            // Search bar
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search for a user by email',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                ),
-                onSubmitted: (value) {
-                  chatController.searchUserByEmail(value);
-                },
-              ),
-            ),
             
             // Search results
             Obx(() {
