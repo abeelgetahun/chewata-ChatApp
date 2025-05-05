@@ -1,5 +1,5 @@
-// lib/services/auth_service.dart
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chewata/models/user_model.dart';
@@ -16,6 +16,11 @@ class AuthService extends GetxController {
   final Rx<User?> firebaseUser = Rx<User?>(null);
   final Rx<UserModel?> userModel = Rx<UserModel?>(null);
   final RxBool isLoading = false.obs;
+
+  // Add presence variables
+StreamSubscription? _presenceSubscription;
+final FirebaseDatabase _database = FirebaseDatabase.instance;
+
   
   // Session timeout variables (30 minutes inactivity timeout)
   final int _sessionTimeoutMinutes = 30;
@@ -151,6 +156,8 @@ class AuthService extends GetxController {
       isLoading.value = false;
     }
   }
+
+  
   
   // Email & Password Login
   Future<UserCredential?> loginWithEmailAndPassword({
@@ -254,4 +261,5 @@ class AuthService extends GetxController {
     _cancelSessionTimer();
     super.onClose();
   }
+  
 }
