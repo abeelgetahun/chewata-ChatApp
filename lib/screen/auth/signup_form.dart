@@ -52,15 +52,17 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
               icon: Icons.person,
               isPassword: false,
               textColor: textColor,
+              keyboardType: TextInputType.name,
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your full name';
-                }
-                if (value.length < 4) {
-                  return 'Name must be at least 4 characters';
-                }
-                return null;
+              if (value == null || value.isEmpty) {
+                return 'Please enter your full name';
+              }
+              if (value.length < 4) {
+                return 'Name must be at least 4 characters';
+              }
+              return null;
               },
+              suffixIcon: null,
             ),
 
             // Email input field
