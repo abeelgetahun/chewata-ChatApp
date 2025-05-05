@@ -96,7 +96,7 @@ class HomeScreen extends StatelessWidget {
             IconButton(
               onPressed: () {
                 // Your logout logic here
-                AuthService.instance.logout();
+                _showLogoutConfirmationDialog(context);
               },
               icon: _buildAppBarIcon('assets/icons/logout.svg', isDarkMode),
             ),
@@ -202,6 +202,33 @@ class HomeScreen extends StatelessWidget {
                 Navigator.of(context).pop();
               },
               child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showLogoutConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+                AuthService.instance.logout(); // Call the logout method
+              },
+              child: const Text('Logout'),
             ),
           ],
         );
