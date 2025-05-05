@@ -27,6 +27,8 @@ class AuthController extends GetxController {
   
   // Auth service
   final AuthService _authService = AuthService.instance;
+
+  get currentUser => null;
   
   // Handle login
   Future<void> login() async {
