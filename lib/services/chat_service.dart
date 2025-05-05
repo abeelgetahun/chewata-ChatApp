@@ -47,17 +47,17 @@ class ChatService extends GetxService {
       if (currentUserId == null) {
         throw Exception('User not authenticated');
       }
-      
+
       if (currentUserId == otherUserId) {
         throw Exception('Cannot create chat with yourself');
       }
-      
+
       // Check if chat already exists
       final existingChat = await findChatBetweenUsers(currentUserId!, otherUserId);
       if (existingChat != null) {
         return existingChat;
       }
-      
+
       // Create a new chat
       final participants = [currentUserId!, otherUserId];
       final chatData = ChatModel(
@@ -69,15 +69,17 @@ class ChatService extends GetxService {
           otherUserId: 0,
         },
       );
-      
+
       final docRef = await _chatsCollection.add(chatData.toMap());
-      return ChatModel.fromMap(
-        (await docRef.get()).data() as Map<String, dynamic>,
-        docRef.id
-      );
+      final createdChat = await docRef.get();
+      if (createdChat.exists) {
+        return ChatModel.fromMap(createdChat.data() as Map<String, dynamic>, docRef.id);
+      } else {
+        throw Exception('Failed to create chat');
+      }
     } catch (e) {
       print('Error creating chat: $e');
-      return null;
+      return null; // Return null if chat creation fails
     }
   }
   
@@ -131,6 +133,16 @@ class ChatService extends GetxService {
             print('Error processing chat documents: $e');
             return [];
           }
+        });
+  }
+
+  // Method to listen to a user's online status
+  Stream<UserModel?> listenToUserOnlineStatus(String userId) {
+    return _usersCollection.doc(userId)
+        .snapshots()
+        .map((snapshot) {
+          if (!snapshot.exists) return null;
+          return UserModel.fromMap(snapshot.data() as Map<String, dynamic>);
         });
   }
   
@@ -287,12 +299,17 @@ Future<void> markChatAsRead(String chatId) async {
 }
 
  // Get user info for chat participants
+  // In chat_service.dart, modify the getUserInfo method
+
   Future<UserModel?> getUserInfo(String userId) async {
     try {
       final doc = await _usersCollection.doc(userId).get();
       if (!doc.exists) return null;
       
-      return UserModel.fromMap(doc.data() as Map<String, dynamic>);
+      final data = doc.data() as Map<String, dynamic>;
+      
+      // Include online status in user info
+      return UserModel.fromMap(data);
     } catch (e) {
       print('Error getting user info: $e');
       return null;
