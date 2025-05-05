@@ -21,6 +21,7 @@ class App extends StatelessWidget {
     Get.put(AuthService(), permanent: true);
     Get.put(AuthController(), permanent: true);
     Get.put(ChatService(), permanent: true);
+    Get.put(ChatController()); 
     
     
     // Get theme controller (already initialized in main.dart)
