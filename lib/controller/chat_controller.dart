@@ -54,13 +54,19 @@ class ChatController extends GetxController {
     });
   }
   
-  // Load user information for chat participants
+    // Modify the _loadChatUsers method to start listening to status
   Future<void> _loadChatUsers(ChatModel chat) async {
     for (final userId in chat.participants) {
-      if (!chatUsers.containsKey(userId) && userId != _authService.firebaseUser.value?.uid) {
+      if (userId != _authService.firebaseUser.value?.uid) {
+        // Load user info
         final userInfo = await _chatService.getUserInfo(userId);
         if (userInfo != null) {
           chatUsers[userId] = userInfo;
+          userOnlineStatus[userId] = userInfo.isOnline;
+          userLastSeen[userId] = userInfo.lastSeen;
+          
+          // Start listening to status changes
+          listenToUserStatus(userId);
         }
       }
     }
@@ -179,7 +185,24 @@ class ChatController extends GetxController {
     currentChatMessages.clear();
     searchedUser.value = null; // Also clear search state
   }
-  
+
+    // Add to ChatController class
+  final RxMap<String, bool> userOnlineStatus = <String, bool>{}.obs;
+  final RxMap<String, DateTime?> userLastSeen = <String, DateTime?>{}.obs;
+
+  // Add this method to listen to real-time status changes
+  void listenToUserStatus(String userId) {
+    if (userId.isEmpty) return;
+    
+    // Listen to changes in the user's status
+    _chatService.listenToUserOnlineStatus(userId).listen((userData) {
+      if (userData != null) {
+        userOnlineStatus[userId] = userData.isOnline;
+        userLastSeen[userId] = userData.lastSeen;
+      }
+    });
+  }
+    
   // Get chat partner's name for display
   String getChatName(ChatModel chat) {
     final otherUserId = chat.participants.firstWhere(
