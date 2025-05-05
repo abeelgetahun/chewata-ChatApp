@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:chewata/screen/home_screen.dart';
@@ -65,6 +64,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
+      // Update the AppBar in ChatScreen
       appBar: AppBar(
         leading: BackButton(
           onPressed: () {
@@ -77,10 +77,38 @@ class _ChatScreenState extends State<ChatScreen> {
         title: Obx(() {
           final chat = _chatController.userChats
               .firstWhere((c) => c.id == widget.chatId, orElse: () => null as dynamic);
-          if (chat == null) return const Text('Chat');
-          return Text(_chatController.getChatName(chat));
+          if (chat == null) {
+            return const Text('Chat Not Found');
+          }
+          
+          final otherUserId = chat.participants.firstWhere(
+            (id) => id != _chatController.currentUser?.id,
+            orElse: () => '',
+          );
+          
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_chatController.getChatName(chat)),
+              if (otherUserId.isNotEmpty)
+                Obx(() {
+                  final isOnline = _chatController.userOnlineStatus[otherUserId] ?? false;
+                  final lastSeen = _chatController.userLastSeen[otherUserId];
+                  
+                  return Text(
+                    isOnline ? 'Online' : lastSeen != null ? 'Last seen ${formatLastSeen(lastSeen)}' : 'Offline',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isOnline ? Colors.green[300] : Colors.grey[400],
+                    ),
+                  );
+                }),
+            ],
+          );
         }),
       ),
+      
+      
       body: Column(
         children: [
           // Messages list
@@ -288,4 +316,22 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
+
+  // Add this helper method to format last seen time
+String formatLastSeen(DateTime? lastSeen) {
+  if (lastSeen == null) return 'Offline';
+  
+  final now = DateTime.now();
+  final difference = now.difference(lastSeen);
+  
+  if (difference.inSeconds < 60) {
+    return 'Just now';
+  } else if (difference.inMinutes < 60) {
+    return '${difference.inMinutes}m ago';
+  } else if (difference.inHours < 24) {
+    return '${difference.inHours}h ago';
+  } else {
+    return DateFormat('MMM d').format(lastSeen);
+  }
+}
 }
