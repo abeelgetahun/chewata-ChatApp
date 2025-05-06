@@ -117,6 +117,7 @@ class ChatListScreen extends StatelessWidget {
   }
   
   
+  // In chat_list_screen.dart, enhance the _buildChatTile method:
   Widget _buildChatTile(
     BuildContext context, 
     ChatModel chat, 
@@ -134,111 +135,169 @@ class ChatListScreen extends StatelessWidget {
       orElse: () => '',
     );
     
-    // Get the other user's information
-    final otherUser = chatController.chatUsers[otherUserId];
-    final isOnline = otherUser?.isOnline ?? false;
-    
-    return Column(
-      children: [
-        ListTile(
-          leading: Stack(
-            children: [
-              CircleAvatar(
-                backgroundColor: Theme.of(context).primaryColor,
-                backgroundImage: profilePic != null && profilePic.isNotEmpty
-                    ? NetworkImage(profilePic)
-                    : null,
-                child: profilePic == null || profilePic.isEmpty
-                    ? Text(
-                        chatName.isNotEmpty ? chatName[0].toUpperCase() : 'U',
-                        style: const TextStyle(color: Colors.white),
-                      )
-                    : null,
-              ),
-              // Online status indicator
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 12,
-                  height: 12,
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      decoration: BoxDecoration(
+        color: isDarkMode 
+          ? Colors.grey[900] 
+          : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Stack(
+          children: [
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: Theme.of(context).primaryColor,
+              backgroundImage: profilePic != null && profilePic.isNotEmpty
+                  ? NetworkImage(profilePic)
+                  : null,
+              child: profilePic == null || profilePic.isEmpty
+                  ? Text(
+                      chatName.isNotEmpty ? chatName[0].toUpperCase() : 'U',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : null,
+            ),
+            // Enhanced online status indicator
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Obx(() {
+                final isOnline = chatController.userOnlineStatus[otherUserId] ?? false;
+                return Container(
+                  width: 16,
+                  height: 16,
                   decoration: BoxDecoration(
-                    color: isOnline ? Colors.green : (isDarkMode ? Colors.grey[800] : Colors.grey[400]),
+                    color: isOnline 
+                      ? Colors.green 
+                      : (isDarkMode ? Colors.grey[700] : Colors.grey[400]),
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isDarkMode ? Colors.black : Colors.white,
                       width: 2,
                     ),
                   ),
+                );
+              }),
+            ),
+          ],
+        ),
+        title: Text(
+          chatName,
+          style: TextStyle(
+            fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+            fontSize: 16,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (chat.lastMessageText != null)
+              Text(
+                chat.lastMessageText!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+                  color: unreadCount > 0
+                      ? isDarkMode ? Colors.white : Colors.black87
+                      : isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                ),
+              )
+            else
+              const Text('No messages yet'),
+            
+            // Add last seen status under the message text
+            SizedBox(height: 4),
+            Obx(() {
+              final isOnline = chatController.userOnlineStatus[otherUserId] ?? false;
+              final lastSeen = chatController.userLastSeen[otherUserId];
+              
+              return Text(
+                isOnline 
+                  ? '● Online'
+                  : lastSeen != null 
+                    ? 'Last seen ${_formatLastSeen(lastSeen)}'
+                    : 'Offline',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isOnline
+                    ? Colors.green
+                    : isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                ),
+              );
+            }),
+          ],
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (lastMessageTime != null)
+              Text(
+                _formatChatTime(lastMessageTime),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 ),
               ),
-            ],
-          ),
-          title: Text(
-            chatName,
-            style: TextStyle(
-              fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          subtitle: chat.lastMessageText != null
-              ? Text(
-                  chat.lastMessageText!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
-                    color: unreadCount > 0
-                        ? isDarkMode ? Colors.white : Colors.black87
-                        : isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  ),
-                )
-              : const Text('No messages yet'),
-          trailing: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (lastMessageTime != null)
-                Text(
-                  _formatChatTime(lastMessageTime),
-                  style: TextStyle(
+            const SizedBox(height: 4),
+            if (unreadCount > 0)
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  unreadCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontSize: 12,
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              const SizedBox(height: 4),
-              if (unreadCount > 0)
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    unreadCount.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          onTap: () {
-            chatController.loadChatMessages(chat.id);
-            Get.toNamed('/chat/${chat.id}');
-          },
+              ),
+          ],
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Container(
-            height: 1,
-            color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-          ),
-        ),
-      ],
+        onTap: () {
+          chatController.loadChatMessages(chat.id);
+          Get.toNamed('/chat/${chat.id}');
+        },
+      ),
     );
   }
+
+  // Add this helper method to format last seen time
+  String _formatLastSeen(DateTime? lastSeen) {
+    if (lastSeen == null) return 'Offline';
+    
+    final now = DateTime.now();
+    final difference = now.difference(lastSeen);
+    
+    if (difference.inSeconds < 60) {
+      return 'just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return DateFormat('MMM d').format(lastSeen);
+    }
+  } 
   String _formatChatTime(DateTime time) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
