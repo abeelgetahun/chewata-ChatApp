@@ -39,21 +39,37 @@ class UserModel {
   
   // Create UserModel from Map
   factory UserModel.fromMap(Map<String, dynamic> map) {
+    DateTime? parseLastSeen(dynamic lastSeenValue) {
+      if (lastSeenValue == null) return null;
+      
+      if (lastSeenValue is Timestamp) {
+        return lastSeenValue.toDate();
+      } else if (lastSeenValue is DateTime) {
+        return lastSeenValue;
+      } else if (lastSeenValue is String) {
+        try {
+          return DateTime.parse(lastSeenValue);
+        } catch (e) {
+          print('Error parsing lastSeen string: $e');
+          return null;
+        }
+      }
+      return null;
+    }
+    
     return UserModel(
       id: map['id'] ?? '',
       fullName: map['fullName'] ?? '',
       email: map['email'] ?? '',
-      birthDate: DateTime.parse(map['birthDate']),
+      birthDate: map['birthDate'] is Timestamp 
+          ? (map['birthDate'] as Timestamp).toDate()
+          : DateTime.parse(map['birthDate']),
       profilePicUrl: map['profilePicUrl'] ?? '',
-      createdAt: DateTime.parse(map['createdAt']),
+      createdAt: map['createdAt'] is Timestamp
+          ? (map['createdAt'] as Timestamp).toDate()
+          : DateTime.parse(map['createdAt']),
       isOnline: map['isOnline'] ?? false,
-      lastSeen: map['lastSeen'] != null ? 
-          (map['lastSeen'] is DateTime ? 
-              map['lastSeen'] : 
-              map['lastSeen'] is Timestamp ? 
-                  (map['lastSeen'] as Timestamp).toDate() : 
-                  DateTime.parse(map['lastSeen'])) : 
-          null,
+      lastSeen: parseLastSeen(map['lastSeen']),
     );
   }
 }
