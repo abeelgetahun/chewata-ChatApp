@@ -1,3 +1,4 @@
+import 'package:chewata/utils/link.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:get/get.dart';
@@ -18,9 +19,22 @@ class AuthService extends GetxController {
   final RxBool isLoading = false.obs;
 
   // Add presence variables
-StreamSubscription? _presenceSubscription;
-final FirebaseDatabase _database = FirebaseDatabase.instance;
-
+  StreamSubscription? _presenceSubscription;
+  final FirebaseDatabase _database = FirebaseDatabase.instance;
+  
+  // Initialize Firebase Realtime Database with the correct URL
+  AuthService() {
+    // Set the database URL
+    _database.databaseURL = TLink.realtimeDatabase;
+    
+    // Configure the connection state persistence
+    try {
+      _database.setPersistenceEnabled(true);
+      print('Firebase Realtime Database persistence enabled');
+    } catch (e) {
+      print('Error setting persistence: $e');
+    }
+  }
   
   // Session timeout variables (30 minutes inactivity timeout)
   final int _sessionTimeoutMinutes = 30;
@@ -39,8 +53,13 @@ final FirebaseDatabase _database = FirebaseDatabase.instance;
     ever(firebaseUser, (user) {
       if (user != null) {
         _startSessionTimer();
+        // Set user as online when they log in or app starts with logged in user
+        updatePresence(true);
       } else {
         _cancelSessionTimer();
+        // Cancel presence subscription when user logs out
+        _presenceSubscription?.cancel();
+        _presenceSubscription = null;
       }
     });
   }
@@ -175,6 +194,9 @@ final FirebaseDatabase _database = FirebaseDatabase.instance;
       
       // Start session timer
       _startSessionTimer();
+      // Update online status after successful login
+      await updatePresence(true);
+      
       
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -194,6 +216,9 @@ final FirebaseDatabase _database = FirebaseDatabase.instance;
     try {
       _cancelSessionTimer();
       await _auth.signOut();
+      // Set user as offline before signing out
+      await updatePresence(false);
+  
       Get.offAllNamed('/auth');
     } catch (e) {
       Get.snackbar('Error', 'Failed to log out. Please try again.');
@@ -258,8 +283,156 @@ final FirebaseDatabase _database = FirebaseDatabase.instance;
   
   @override
   void onClose() {
+    // Make sure to set user as offline when service is closed
+    if (firebaseUser.value != null) {
+      updatePresence(false);
+    }
     _cancelSessionTimer();
+    _presenceSubscription?.cancel();
     super.onClose();
   }
   
+  // Add this method to your AuthService class
+  Future<void> updatePresence(bool isOnline) async {
+  try {
+    final user = firebaseUser.value;
+    if (user != null) {
+      print('Updating presence for user ${user.uid}: isOnline=$isOnline');
+      
+      // Update user model if needed
+      if (userModel.value != null) {
+        userModel.value = UserModel(
+          id: userModel.value!.id,
+          fullName: userModel.value!.fullName,
+          email: userModel.value!.email,
+          birthDate: userModel.value!.birthDate,
+          profilePicUrl: userModel.value!.profilePicUrl,
+          createdAt: userModel.value!.createdAt,
+          isOnline: isOnline,
+          lastSeen: isOnline ? null : DateTime.now(),
+        );
+      }
+      
+      // Update Firestore status
+      await _db.collection('users').doc(user.uid).update({
+        'isOnline': isOnline,
+        'lastSeen': isOnline ? null : FieldValue.serverTimestamp(),
+      });
+      
+      // Make sure user is authenticated before updating Realtime Database
+      if (_auth.currentUser != null) {
+        // Also update Realtime Database directly
+        final userStatusRef = _database.ref('status/${user.uid}');
+        await userStatusRef.set({
+          'online': isOnline,
+          'lastChanged': ServerValue.timestamp,
+        });
+        
+        // If we're setting user as online, set up the disconnect handler
+        if (isOnline) {
+          _setupPresenceDisconnectHook(user.uid);
+        } else {
+          // If explicitly going offline, clear any disconnect handlers
+          _presenceSubscription?.cancel();
+          _presenceSubscription = null;
+        }
+      } else {
+        print('Cannot update Realtime Database: User not authenticated');
+      }
+    }
+  } catch (e) {
+    print('Error updating presence: $e');
+  }
+}
+  
+  // Add this method to handle unexpected disconnects
+  void _setupPresenceDisconnectHook(String userId) {
+    try {
+      // Cancel any existing subscription first
+      _presenceSubscription?.cancel();
+      
+      // Make sure user is still authenticated
+      if (_auth.currentUser == null) {
+        print('Cannot set up disconnect hook: User not authenticated');
+        return;
+      }
+      
+      print('Setting up presence disconnect hook for user: $userId');
+      
+      // Create a reference to this user's presence in Realtime Database
+      final userStatusRef = _database.ref('status/$userId');
+      
+      // Create a reference to the special '.info/connected' path
+      final connectedRef = _database.ref('.info/connected');
+      
+      // Listen for connection state changes
+      _presenceSubscription = connectedRef.onValue.listen((event) {
+        // Make sure user is still authenticated
+        if (_auth.currentUser == null) {
+          print('User no longer authenticated, cancelling presence updates');
+          _presenceSubscription?.cancel();
+          return;
+        }
+        
+        print('Connection state changed: ${event.snapshot.value}');
+        final connected = event.snapshot.value as bool? ?? false;
+        if (!connected) {
+          print('Device disconnected');
+          return;
+        }
+        
+        print('Device connected, setting up onDisconnect');
+        
+        // When we disconnect, update the database
+        userStatusRef.onDisconnect().set({
+          'online': false,
+          'lastChanged': ServerValue.timestamp,
+        }).then((_) {
+          print('onDisconnect handler set up successfully');
+          
+          // Set the user as online in the Realtime Database
+          userStatusRef.set({
+            'online': true,
+            'lastChanged': ServerValue.timestamp,
+          }).then((_) {
+            print('User set as online in Realtime Database');
+          }).catchError((error) {
+            print('Error setting online status: $error');
+          });
+          
+          // Also set up a listener to sync Realtime DB status to Firestore
+          _setupFirestoreSyncFromRealtimeDB(userId);
+        }).catchError((error) {
+          print('Error setting up onDisconnect handler: $error');
+        });
+      });
+    } catch (e) {
+      print('Error setting up presence disconnect hook: $e');
+    }
+  }
+  
+  // Add this method to sync Realtime Database status to Firestore
+  void _setupFirestoreSyncFromRealtimeDB(String userId) {
+    try {
+      final userStatusRef = _database.ref('status/$userId');
+      
+      // Listen for changes to the user's status in Realtime Database
+      userStatusRef.onValue.listen((event) {
+        if (event.snapshot.value == null) return;
+        
+        final data = event.snapshot.value as Map<dynamic, dynamic>;
+        final isOnline = data['online'] as bool? ?? false;
+        
+        // Only update Firestore if the status has changed to offline
+        if (!isOnline) {
+          _db.collection('users').doc(userId).update({
+            'isOnline': false,
+            'lastSeen': FieldValue.serverTimestamp(),
+          });
+        }
+      });
+    } catch (e) {
+      print('Error setting up Firestore sync: $e');
+    }
+  }
 }
