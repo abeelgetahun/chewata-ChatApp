@@ -64,14 +64,13 @@ class _ChatScreenState extends State<ChatScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
-      // Update the AppBar in ChatScreen
       appBar: AppBar(
         leading: BackButton(
           onPressed: () {
             final ChatController chatController = Get.find<ChatController>();
-            chatController.searchedUser.value = null; // Clear search state
-            chatController.clearSelectedChat(); // Clear selected chat state
-            Get.back(); // Navigate back to the previous screen
+            chatController.searchedUser.value = null;
+            chatController.clearSelectedChat();
+            Get.back();
           },
         ),
         title: Obx(() {
@@ -86,26 +85,87 @@ class _ChatScreenState extends State<ChatScreen> {
             orElse: () => '',
           );
           
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          return Row(
             children: [
-              Text(_chatController.getChatName(chat)),
-              if (otherUserId.isNotEmpty)
-                Obx(() {
-                  final isOnline = _chatController.userOnlineStatus[otherUserId] ?? false;
-                  final lastSeen = _chatController.userLastSeen[otherUserId];
-                  
-                  return Text(
-                    isOnline ? 'Online' : lastSeen != null ? 'Last seen ${formatLastSeen(lastSeen)}' : 'Offline',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isOnline ? Colors.green[300] : Colors.grey[400],
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: Theme.of(context).primaryColor,
+                backgroundImage: _chatController.getChatProfilePic(chat) != null 
+                    ? NetworkImage(_chatController.getChatProfilePic(chat)!) 
+                    : null,
+                child: _chatController.getChatProfilePic(chat) == null
+                    ? Text(
+                        _chatController.getChatName(chat)[0].toUpperCase(),
+                        style: TextStyle(color: Colors.white),
+                      )
+                    : null,
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _chatController.getChatName(chat),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  );
-                }),
+                    if (otherUserId.isNotEmpty)
+                      Obx(() {
+                        final isOnline = _chatController.userOnlineStatus[otherUserId] ?? false;
+                        final lastSeen = _chatController.userLastSeen[otherUserId];
+                        
+                        return Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: isOnline ? Colors.green : Colors.grey,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              isOnline ? 'Online' : lastSeen != null ? formatLastSeen(lastSeen) : 'Offline',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isOnline ? Colors.green[300] : Colors.grey[400],
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
+                  ],
+                ),
+              ),
             ],
           );
         }),
+        actions: [
+          // Add more actions here if needed
+          PopupMenuButton(
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                child: Text('View Profile'),
+                value: 'profile',
+              ),
+              PopupMenuItem(
+                child: Text('Clear Chat'),
+                value: 'clear',
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'profile') {
+                // Handle view profile
+              } else if (value == 'clear') {
+                // Handle clear chat
+              }
+            },
+          ),
+        ],
       ),
       
       
@@ -222,6 +282,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
   
+  // In chat_screen.dart, modify the _buildMessageBubble method:
   Widget _buildMessageBubble(BuildContext context, MessageModel message) {
     final currentUserId = _chatController.currentUser?.id;
     final isCurrentUser = message.senderId == currentUserId;
@@ -238,6 +299,9 @@ class _ChatScreenState extends State<ChatScreen> {
           // Message bubble
           Flexible(
             child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75, // Limit max width
+              ),
               padding: const EdgeInsets.symmetric(
                 horizontal: 16.0,
                 vertical: 10.0,
