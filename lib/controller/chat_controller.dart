@@ -20,6 +20,10 @@ class ChatController extends GetxController {
   final RxBool isSearching = false.obs;
   final RxBool isLoadingMessages = false.obs;
   final Rx<UserModel?> searchedUser = Rx<UserModel?>(null);
+
+  // Add a map to track active subscriptions
+final Map<String, StreamSubscription> _statusSubscriptions = {};
+
   
   // Store the current user for convenience
   UserModel? get currentUser => _authService.userModel.value;
@@ -194,15 +198,35 @@ class ChatController extends GetxController {
   void listenToUserStatus(String userId) {
     if (userId.isEmpty) return;
     
+    // Don't create duplicate subscriptions
+    if (_statusSubscriptions.containsKey(userId)) {
+      print('Already listening to status for user: $userId');
+      return;
+    }
+    
+    print('Starting to listen to status for user: $userId');
+    
     // Listen to changes in the user's status
-    _chatService.listenToUserOnlineStatus(userId).listen((userData) {
+    final subscription = _chatService.listenToUserOnlineStatus(userId).listen((userData) {
       if (userData != null) {
-        userOnlineStatus[userId] = userData.isOnline;
-        userLastSeen[userId] = userData.lastSeen;
+        final bool wasOnline = userOnlineStatus[userId] ?? false;
+        final bool isNowOnline = userData.isOnline;
+        
+        print('Status update for $userId: online=$isNowOnline, lastSeen=${userData.lastSeen}');
+        
+        // Only update if there's an actual change to avoid UI flicker
+        if (wasOnline != isNowOnline || 
+            (userData.lastSeen != null && userLastSeen[userId] != userData.lastSeen)) {
+          userOnlineStatus[userId] = isNowOnline;
+          userLastSeen[userId] = userData.lastSeen;
+        }
       }
     });
-  }
     
+    // Store the subscription
+    _statusSubscriptions[userId] = subscription;
+  }
+      
   // Get chat partner's name for display
   String getChatName(ChatModel chat) {
     final otherUserId = chat.participants.firstWhere(
@@ -231,9 +255,18 @@ class ChatController extends GetxController {
     return chat.unreadCount[userId] ?? 0;
   }
   
+
+
   @override
   void onClose() {
-    _messagesSubscription?.cancel(); // Cancel the subscription
+    _messagesSubscription?.cancel();
+    
+    // Cancel all status subscriptions
+    for (final subscription in _statusSubscriptions.values) {
+      subscription.cancel();
+    }
+    _statusSubscriptions.clear();
+    
     selectedChatId.value = '';
     currentChatMessages.clear();
     super.onClose();
@@ -247,6 +280,8 @@ void refreshChats() {
   chatUsers.clear();
   _listenToUserChats();
 }
+
+
 
 // Add to ChatController class properties
 StreamSubscription<List<MessageModel>>? _messagesSubscription;
