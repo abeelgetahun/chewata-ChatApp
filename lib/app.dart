@@ -2,6 +2,7 @@ import 'package:chewata/controller/auth_controller.dart';
 import 'package:chewata/controller/chat_controller.dart';
 import 'package:chewata/controller/theme_controller.dart';
 import 'package:chewata/screen/auth/auth_screen.dart';
+import 'package:chewata/screen/chat/app_life_cycle_service.dart';
 import 'package:chewata/screen/chat/chat_screen.dart';
 import 'package:chewata/screen/chat/search_screen.dart';
 import 'package:chewata/screen/home_screen.dart';
@@ -22,6 +23,8 @@ class App extends StatelessWidget {
     Get.put(AuthController(), permanent: true);
     Get.put(ChatService(), permanent: true);
     Get.put(ChatController()); 
+     Get.put(AppLifecycleService(), permanent: true);
+  
     
     
     // Get theme controller (already initialized in main.dart)
