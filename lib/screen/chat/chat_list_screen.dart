@@ -117,7 +117,6 @@ class ChatListScreen extends StatelessWidget {
   }
   
   
-  // In chat_list_screen.dart, enhance the _buildChatTile method:
   Widget _buildChatTile(
     BuildContext context, 
     ChatModel chat, 
@@ -171,7 +170,7 @@ class ChatListScreen extends StatelessWidget {
                     )
                   : null,
             ),
-            // Enhanced online status indicator
+            // Online status indicator (only shows green for online, normal color for offline)
             Positioned(
               right: 0,
               bottom: 0,
@@ -220,26 +219,7 @@ class ChatListScreen extends StatelessWidget {
             else
               const Text('No messages yet'),
             
-            // Add last seen status under the message text
-            SizedBox(height: 4),
-            Obx(() {
-              final isOnline = chatController.userOnlineStatus[otherUserId] ?? false;
-              final lastSeen = chatController.userLastSeen[otherUserId];
-              
-              return Text(
-                isOnline 
-                  ? '● Online'
-                  : lastSeen != null 
-                    ? 'Last seen ${_formatLastSeen(lastSeen)}'
-                    : 'Offline',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isOnline
-                    ? Colors.green
-                    : isDarkMode ? Colors.grey[500] : Colors.grey[600],
-                ),
-              );
-            }),
+            // Removed the last seen status text as requested
           ],
         ),
         trailing: Column(
