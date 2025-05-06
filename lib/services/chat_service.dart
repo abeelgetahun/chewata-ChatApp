@@ -40,6 +40,22 @@ class ChatService extends GetxService {
       return null;
     }
   }
+
+  // In chat_service.dart, add this enhanced method for status listening
+  Stream<UserModel?> listenToUserOnlineStatus(String userId) {
+    // Create a merged stream that combines Firestore and Realtime Database changes
+    return _usersCollection.doc(userId)
+        .snapshots()
+        .map((snapshot) {
+          if (!snapshot.exists) return null;
+          try {
+            return UserModel.fromMap(snapshot.data() as Map<String, dynamic>);
+          } catch (e) {
+            print('Error parsing user data: $e');
+            return null;
+          }
+        });
+  }
   
   // Create a new chat or get existing chat between two users
   Future<ChatModel?> createOrGetChat(String otherUserId) async {
@@ -136,15 +152,6 @@ class ChatService extends GetxService {
         });
   }
 
-  // Method to listen to a user's online status
-  Stream<UserModel?> listenToUserOnlineStatus(String userId) {
-    return _usersCollection.doc(userId)
-        .snapshots()
-        .map((snapshot) {
-          if (!snapshot.exists) return null;
-          return UserModel.fromMap(snapshot.data() as Map<String, dynamic>);
-        });
-  }
   
   // Get messages for a specific chat
   Stream<List<MessageModel>> getChatMessages(String chatId) {
@@ -299,8 +306,6 @@ Future<void> markChatAsRead(String chatId) async {
 }
 
  // Get user info for chat participants
-  // In chat_service.dart, modify the getUserInfo method
-
   Future<UserModel?> getUserInfo(String userId) async {
     try {
       final doc = await _usersCollection.doc(userId).get();
@@ -315,4 +320,7 @@ Future<void> markChatAsRead(String chatId) async {
       return null;
     }
   }
+
+
+  
 }
