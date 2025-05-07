@@ -1,3 +1,4 @@
+import 'package:chewata/controller/account_controller.dart';
 import 'package:chewata/utils/link.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -220,6 +221,9 @@ class AuthService extends GetxController {
         // Wait for presence update to complete before signing out
         await updatePresence(false);
 
+        // Clear the user model before signing out
+        userModel.value = null;
+
         // Add a small delay to ensure database operations complete
         await Future.delayed(const Duration(milliseconds: 500));
 
@@ -228,6 +232,9 @@ class AuthService extends GetxController {
       } else {
         await _auth.signOut();
       }
+
+      // Notify any controllers that might need to clear their data
+      Get.find<AccountController>().clearUserData();
 
       Get.offAllNamed('/auth');
     } catch (e) {
