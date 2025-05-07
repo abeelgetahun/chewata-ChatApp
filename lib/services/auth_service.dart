@@ -8,11 +8,11 @@ import 'dart:async';
 
 class AuthService extends GetxController {
   static AuthService get instance => Get.find();
-  
+
   // Firebase instances
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  
+
   // Rx variables to track changes in user authentication
   final Rx<User?> firebaseUser = Rx<User?>(null);
   final Rx<UserModel?> userModel = Rx<UserModel?>(null);
@@ -21,12 +21,12 @@ class AuthService extends GetxController {
   // Add presence variables
   StreamSubscription? _presenceSubscription;
   final FirebaseDatabase _database = FirebaseDatabase.instance;
-  
+
   // Initialize Firebase Realtime Database with the correct URL
   AuthService() {
     // Set the database URL
     _database.databaseURL = TLink.realtimeDatabase;
-    
+
     // Configure the connection state persistence
     try {
       _database.setPersistenceEnabled(true);
@@ -35,12 +35,12 @@ class AuthService extends GetxController {
       print('Error setting persistence: $e');
     }
   }
-  
+
   // Session timeout variables (30 minutes inactivity timeout)
   final int _sessionTimeoutMinutes = 30;
   Timer? _sessionTimer;
   final RxBool _isSessionActive = true.obs;
-  
+
   @override
   void onInit() {
     super.onInit();
@@ -48,7 +48,7 @@ class AuthService extends GetxController {
     firebaseUser.bindStream(_auth.userChanges());
     // When firebaseUser changes, fetch user data from Firestore
     ever(firebaseUser, _setUserModel);
-    
+
     // Start session management if user is logged in
     ever(firebaseUser, (user) {
       if (user != null) {
@@ -63,7 +63,7 @@ class AuthService extends GetxController {
       }
     });
   }
-  
+
   // Fetch user data from Firestore when user logs in
   Future<void> _setUserModel(User? user) async {
     if (user != null) {
@@ -72,7 +72,7 @@ class AuthService extends GetxController {
       userModel.value = null;
     }
   }
-  
+
   // Fetch user data from Firestore
   Future<UserModel?> getUserDataFromFirestore(String uid) async {
     try {
@@ -86,39 +86,39 @@ class AuthService extends GetxController {
       return null;
     }
   }
-  
+
   // Start session timer for inactivity logout
   void _startSessionTimer() {
     _cancelSessionTimer();
     _isSessionActive.value = true;
-    
+
     _sessionTimer = Timer(Duration(minutes: _sessionTimeoutMinutes), () {
       // Session timeout - log the user out
       if (firebaseUser.value != null) {
         _isSessionActive.value = false;
         logout();
         Get.snackbar(
-          'Session Expired', 
+          'Session Expired',
           'You have been logged out due to inactivity',
           duration: const Duration(seconds: 5),
         );
       }
     });
   }
-  
+
   // Reset session timer on user activity
   void resetSessionTimer() {
     if (firebaseUser.value != null) {
       _startSessionTimer();
     }
   }
-  
+
   // Cancel the session timer
   void _cancelSessionTimer() {
     _sessionTimer?.cancel();
     _sessionTimer = null;
   }
-  
+
   // Email & Password Sign Up
   Future<UserCredential?> signUpWithEmailAndPassword({
     required String email,
@@ -128,23 +128,23 @@ class AuthService extends GetxController {
   }) async {
     try {
       isLoading.value = true;
-      
+
       // Validate password complexity
       if (!_isPasswordStrong(password)) {
         Get.snackbar(
-          'Weak Password', 
+          'Weak Password',
           'Password must be at least 6 characters',
           duration: const Duration(seconds: 5),
         );
         return null;
       }
-      
+
       // Create user in Firebase Auth
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-      
+
       // Create user document in Firestore
       if (userCredential.user != null) {
         final user = UserModel(
@@ -155,12 +155,15 @@ class AuthService extends GetxController {
           profilePicUrl: '',
           createdAt: DateTime.now(),
         );
-        
-        await _db.collection('users').doc(userCredential.user!.uid).set(user.toMap());
-        
+
+        await _db
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set(user.toMap());
+
         // Start session timer
         _startSessionTimer();
-        
+
         return userCredential;
       }
       return null;
@@ -176,8 +179,6 @@ class AuthService extends GetxController {
     }
   }
 
-  
-  
   // Email & Password Login
   Future<UserCredential?> loginWithEmailAndPassword({
     required String email,
@@ -185,19 +186,18 @@ class AuthService extends GetxController {
   }) async {
     try {
       isLoading.value = true;
-      
+
       // Sign in with Firebase
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      
+
       // Start session timer
       _startSessionTimer();
       // Update online status after successful login
       await updatePresence(true);
-      
-      
+
       return userCredential;
     } on FirebaseAuthException catch (e) {
       handleFirebaseAuthError(e);
@@ -210,27 +210,40 @@ class AuthService extends GetxController {
       isLoading.value = false;
     }
   }
-  
-  // Sign out
+
+  // Sign out - fixed version
   Future<void> logout() async {
     try {
       _cancelSessionTimer();
-      await _auth.signOut();
-      // Set user as offline before signing out
-      await updatePresence(false);
-  
+
+      if (firebaseUser.value != null) {
+        // Wait for presence update to complete before signing out
+        await updatePresence(false);
+
+        // Add a small delay to ensure database operations complete
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        // Now sign out
+        await _auth.signOut();
+      } else {
+        await _auth.signOut();
+      }
+
       Get.offAllNamed('/auth');
     } catch (e) {
       Get.snackbar('Error', 'Failed to log out. Please try again.');
       print('Logout Error: $e');
     }
   }
-  
+
   // Password Reset
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
-      Get.snackbar('Success', 'Password reset email sent. Please check your inbox.');
+      Get.snackbar(
+        'Success',
+        'Password reset email sent. Please check your inbox.',
+      );
     } on FirebaseAuthException catch (e) {
       handleFirebaseAuthError(e);
     } catch (e) {
@@ -238,17 +251,17 @@ class AuthService extends GetxController {
       print('Password Reset Error: $e');
     }
   }
-  
+
   // Validate password strength
   bool _isPasswordStrong(String password) {
     // Minimum 6 characters
     return password.length >= 6;
   }
-  
+
   // Handle Firebase Auth errors
   void handleFirebaseAuthError(FirebaseAuthException e) {
     String message = 'An error occurred. Please try again.';
-    
+
     switch (e.code) {
       case 'user-not-found':
         message = 'No user found for this email.';
@@ -277,10 +290,14 @@ class AuthService extends GetxController {
       default:
         message = 'An error occurred. Please try again.';
     }
-    
-    Get.snackbar('Authentication Error', message, duration: const Duration(seconds: 5));
+
+    Get.snackbar(
+      'Authentication Error',
+      message,
+      duration: const Duration(seconds: 5),
+    );
   }
-  
+
   @override
   void onClose() {
     // Make sure to set user as offline when service is closed
@@ -291,14 +308,23 @@ class AuthService extends GetxController {
     _presenceSubscription?.cancel();
     super.onClose();
   }
-  
-  // Add this method to your AuthService class
+
   Future<void> updatePresence(bool isOnline) async {
-  try {
-    final user = firebaseUser.value;
-    if (user != null) {
+    try {
+      final user = firebaseUser.value;
+      if (user == null) {
+        print('Cannot update presence: No user logged in');
+        return;
+      }
+
       print('Updating presence for user ${user.uid}: isOnline=$isOnline');
-      
+
+      // First update Firestore since it's more critical for UI
+      await _db.collection('users').doc(user.uid).update({
+        'isOnline': isOnline,
+        'lastSeen': isOnline ? null : FieldValue.serverTimestamp(),
+      });
+
       // Update user model if needed
       if (userModel.value != null) {
         userModel.value = UserModel(
@@ -312,14 +338,8 @@ class AuthService extends GetxController {
           lastSeen: isOnline ? null : DateTime.now(),
         );
       }
-      
-      // Update Firestore status
-      await _db.collection('users').doc(user.uid).update({
-        'isOnline': isOnline,
-        'lastSeen': isOnline ? null : FieldValue.serverTimestamp(),
-      });
-      
-      // Make sure user is authenticated before updating Realtime Database
+
+      // Make sure user is still authenticated before updating Realtime Database
       if (_auth.currentUser != null) {
         // Also update Realtime Database directly
         final userStatusRef = _database.ref('status/${user.uid}');
@@ -327,7 +347,7 @@ class AuthService extends GetxController {
           'online': isOnline,
           'lastChanged': ServerValue.timestamp,
         });
-        
+
         // If we're setting user as online, set up the disconnect handler
         if (isOnline) {
           _setupPresenceDisconnectHook(user.uid);
@@ -339,32 +359,31 @@ class AuthService extends GetxController {
       } else {
         print('Cannot update Realtime Database: User not authenticated');
       }
+    } catch (e) {
+      print('Error updating presence: $e');
     }
-  } catch (e) {
-    print('Error updating presence: $e');
   }
-}
-  
+
   // Add this method to handle unexpected disconnects
   void _setupPresenceDisconnectHook(String userId) {
     try {
       // Cancel any existing subscription first
       _presenceSubscription?.cancel();
-      
+
       // Make sure user is still authenticated
       if (_auth.currentUser == null) {
         print('Cannot set up disconnect hook: User not authenticated');
         return;
       }
-      
+
       print('Setting up presence disconnect hook for user: $userId');
-      
+
       // Create a reference to this user's presence in Realtime Database
       final userStatusRef = _database.ref('status/$userId');
-      
+
       // Create a reference to the special '.info/connected' path
       final connectedRef = _database.ref('.info/connected');
-      
+
       // Listen for connection state changes
       _presenceSubscription = connectedRef.onValue.listen((event) {
         // Make sure user is still authenticated
@@ -373,56 +392,57 @@ class AuthService extends GetxController {
           _presenceSubscription?.cancel();
           return;
         }
-        
+
         print('Connection state changed: ${event.snapshot.value}');
         final connected = event.snapshot.value as bool? ?? false;
         if (!connected) {
           print('Device disconnected');
           return;
         }
-        
+
         print('Device connected, setting up onDisconnect');
-        
+
         // When we disconnect, update the database
-        userStatusRef.onDisconnect().set({
-          'online': false,
-          'lastChanged': ServerValue.timestamp,
-        }).then((_) {
-          print('onDisconnect handler set up successfully');
-          
-          // Set the user as online in the Realtime Database
-          userStatusRef.set({
-            'online': true,
-            'lastChanged': ServerValue.timestamp,
-          }).then((_) {
-            print('User set as online in Realtime Database');
-          }).catchError((error) {
-            print('Error setting online status: $error');
-          });
-          
-          // Also set up a listener to sync Realtime DB status to Firestore
-          _setupFirestoreSyncFromRealtimeDB(userId);
-        }).catchError((error) {
-          print('Error setting up onDisconnect handler: $error');
-        });
+        userStatusRef
+            .onDisconnect()
+            .set({'online': false, 'lastChanged': ServerValue.timestamp})
+            .then((_) {
+              print('onDisconnect handler set up successfully');
+
+              // Set the user as online in the Realtime Database
+              userStatusRef
+                  .set({'online': true, 'lastChanged': ServerValue.timestamp})
+                  .then((_) {
+                    print('User set as online in Realtime Database');
+                  })
+                  .catchError((error) {
+                    print('Error setting online status: $error');
+                  });
+
+              // Also set up a listener to sync Realtime DB status to Firestore
+              _setupFirestoreSyncFromRealtimeDB(userId);
+            })
+            .catchError((error) {
+              print('Error setting up onDisconnect handler: $error');
+            });
       });
     } catch (e) {
       print('Error setting up presence disconnect hook: $e');
     }
   }
-  
+
   // Add this method to sync Realtime Database status to Firestore
   void _setupFirestoreSyncFromRealtimeDB(String userId) {
     try {
       final userStatusRef = _database.ref('status/$userId');
-      
+
       // Listen for changes to the user's status in Realtime Database
       userStatusRef.onValue.listen((event) {
         if (event.snapshot.value == null) return;
-        
+
         final data = event.snapshot.value as Map<dynamic, dynamic>;
         final isOnline = data['online'] as bool? ?? false;
-        
+
         // Only update Firestore if the status has changed to offline
         if (!isOnline) {
           _db.collection('users').doc(userId).update({
