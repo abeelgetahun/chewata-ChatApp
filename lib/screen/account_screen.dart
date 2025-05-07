@@ -1,10 +1,10 @@
 // lib/screen/account_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:chewata/models/user_model.dart';
-import 'package:chewata/controller/auth_controller.dart';
+import 'package:chewata/controller/account_controller.dart';
 import 'package:chewata/controller/theme_controller.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:chewata/services/auth_service.dart';
+import 'package:chewata/screen/account/personal_info_screen.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({Key? key}) : super(key: key);
@@ -12,147 +12,180 @@ class AccountScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final AuthController authController = Get.find<AuthController>();
     final ThemeController themeController = Get.find<ThemeController>();
-    
-    // Mock user data - replace with actual user data from your AuthController
-    final UserModel user = authController.currentUser ?? 
-      UserModel(
-        id: '123',
-        fullName: 'John Doe',
-        email: 'johndoe@example.com',
-        birthDate: DateTime(1990, 1, 1),
-        profilePicUrl: '',
-        createdAt: DateTime.now(),
-      );
-    
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          // User profile section
-          _buildProfileSection(context, user, isDarkMode),
-          
-          const SizedBox(height: 24),
-          
-          // Account control options
-          _buildAccountOptions(context, isDarkMode, themeController),
-          
-          const SizedBox(height: 24),
-          
-          // App settings
-          _buildAppSettings(context, isDarkMode, themeController),
-          
-          const SizedBox(height: 24),
-          
-          // Support and about
-          _buildSupportAndAbout(context, isDarkMode),
-          
-          const SizedBox(height: 32),
-          
-          // Logout button
-          _buildLogoutButton(context, isDarkMode),
-          
-          const SizedBox(height: 40),
-        ],
-      ),
+
+    // Initialize account controller if not already registered
+    if (!Get.isRegistered<AccountController>()) {
+      Get.put(AccountController());
+    }
+    final AccountController accountController = Get.find<AccountController>();
+
+    return FutureBuilder(
+      future: accountController.refreshUserData(),
+      builder: (context, snapshot) {
+        // Show loading indicator only if this is the first load
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            accountController.user.value == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              // User profile section
+              _buildProfileSection(context, accountController, isDarkMode),
+
+              const SizedBox(height: 24),
+
+              // Account control options
+              _buildAccountOptions(context, isDarkMode),
+
+              const SizedBox(height: 24),
+
+              // App settings
+              _buildAppSettings(context, isDarkMode, themeController),
+
+              const SizedBox(height: 24),
+
+              // Support and about
+              _buildSupportAndAbout(context, isDarkMode),
+
+              const SizedBox(height: 32),
+
+              // Logout button
+              _buildLogoutButton(context, isDarkMode),
+
+              const SizedBox(height: 40),
+            ],
+          ),
+        );
+      },
     );
   }
-  
-  Widget _buildProfileSection(BuildContext context, UserModel user, bool isDarkMode) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[850] : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+
+  Widget _buildProfileSection(
+    BuildContext context,
+    AccountController controller,
+    bool isDarkMode,
+  ) {
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isDarkMode ? Colors.grey[850] : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Profile image
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-            backgroundImage: user.profilePicUrl.isNotEmpty 
-                ? NetworkImage(user.profilePicUrl) 
-                : null,
-            child: user.profilePicUrl.isEmpty
-                ? Icon(
-                    Icons.person,
-                    size: 50,
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  )
-                : null,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // User name
-          Text(
-            user.fullName,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : Colors.black,
+          height: 250,
+          child: const Center(child: CircularProgressIndicator()),
+        );
+      }
+
+      final user = controller.user.value;
+
+      return Container(
+        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDarkMode ? Colors.grey[850] : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-          ),
-          
-          const SizedBox(height: 8),
-          
-          // User email
-          Text(
-            user.email,
-            style: TextStyle(
-              fontSize: 16,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+          ],
+        ),
+        child: Column(
+          children: [
+            // Profile image
+            CircleAvatar(
+              radius: 50,
+              backgroundColor: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+              backgroundImage:
+                  user?.profilePicUrl != null && user!.profilePicUrl.isNotEmpty
+                      ? NetworkImage(user.profilePicUrl)
+                      : null,
+              child:
+                  user?.profilePicUrl == null || user!.profilePicUrl.isEmpty
+                      ? Icon(
+                        Icons.person,
+                        size: 50,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      )
+                      : null,
             ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Edit profile button
-          OutlinedButton.icon(
-            onPressed: () {
-              // Navigate to edit profile screen
-              // Get.to(() => EditProfileScreen(), transition: Transition.rightToLeft);
-              Get.snackbar(
-                'Edit Profile',
-                'This would navigate to the edit profile screen',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
-            icon: Icon(
-              Icons.edit,
-              size: 18,
-              color: isDarkMode ? Colors.white : Colors.black,
-            ),
-            label: Text(
-              'Edit Profile',
+
+            const SizedBox(height: 16),
+
+            // User name
+            Text(
+              user?.fullName ?? 'Guest User',
               style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
                 color: isDarkMode ? Colors.white : Colors.black,
               ),
             ),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(
-                color: isDarkMode ? Colors.white : Colors.black,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+
+            const SizedBox(height: 8),
+
+            // User email
+            Text(
+              user?.email ?? 'No email available',
+              style: TextStyle(
+                fontSize: 16,
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
               ),
             ),
-          ),
-        ],
-      ),
-    );
+
+            const SizedBox(height: 16),
+
+            // Edit profile button
+            OutlinedButton.icon(
+              onPressed: () {
+                // Navigate to edit profile screen
+                Get.to(
+                  () => const PersonalInfoScreen(),
+                  transition: Transition.rightToLeft,
+                );
+              },
+              icon: Icon(
+                Icons.edit,
+                size: 18,
+                color: isDarkMode ? Colors.white : Colors.black,
+              ),
+              label: Text(
+                'Edit Profile',
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: isDarkMode ? Colors.white : Colors.black,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
-  
-  Widget _buildAccountOptions(BuildContext context, bool isDarkMode, ThemeController themeController) {
+
+  Widget _buildAccountOptions(BuildContext context, bool isDarkMode) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -173,35 +206,28 @@ class AccountScreen extends StatelessWidget {
           'Personal Information',
           Icons.person_outline,
           () {
-            Get.snackbar(
-              'Personal Information',
-              'This would navigate to the personal information screen',
-              snackPosition: SnackPosition.BOTTOM,
+            Get.to(
+              () => const PersonalInfoScreen(),
+              transition: Transition.rightToLeft,
             );
           },
           isDarkMode,
         ),
-        _buildOptionItem(
-          context,
-          'Privacy & Security',
-          Icons.security,
-          () {
-            Get.snackbar(
-              'Privacy & Security',
-              'This would navigate to the privacy and security screen',
-              snackPosition: SnackPosition.BOTTOM,
-            );
-          },
-          isDarkMode,
-        ),
+        _buildOptionItem(context, 'Privacy & Security', Icons.security, () {
+          Get.snackbar(
+            'Coming Soon',
+            'This feature is under development',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }, isDarkMode),
         _buildOptionItem(
           context,
           'Notification Settings',
           Icons.notifications_none,
           () {
             Get.snackbar(
-              'Notification Settings',
-              'This would navigate to the notification settings screen',
+              'Coming Soon',
+              'This feature is under development',
               snackPosition: SnackPosition.BOTTOM,
             );
           },
@@ -210,8 +236,12 @@ class AccountScreen extends StatelessWidget {
       ],
     );
   }
-  
-  Widget _buildAppSettings(BuildContext context, bool isDarkMode, ThemeController themeController) {
+
+  Widget _buildAppSettings(
+    BuildContext context,
+    bool isDarkMode,
+    ThemeController themeController,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -227,45 +257,27 @@ class AccountScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _buildOptionItem(
-          context,
-          'Appearance',
-          Icons.color_lens_outlined,
-          () {
-            _showThemeSelectionDialog(context, themeController);
-          },
-          isDarkMode,
-        ),
-        _buildOptionItem(
-          context,
-          'Language',
-          Icons.language,
-          () {
-            Get.snackbar(
-              'Language',
-              'This would open language selection options',
-              snackPosition: SnackPosition.BOTTOM,
-            );
-          },
-          isDarkMode,
-        ),
-        _buildOptionItem(
-          context,
-          'Data Usage',
-          Icons.data_usage,
-          () {
-            Get.snackbar(
-              'Data Usage',
-              'This would navigate to the data usage screen',
-              snackPosition: SnackPosition.BOTTOM,
-            );
-          },
-          isDarkMode,
-        ),
+        _buildOptionItem(context, 'Appearance', Icons.color_lens_outlined, () {
+          _showThemeSelectionDialog(context, themeController);
+        }, isDarkMode),
+        _buildOptionItem(context, 'Language', Icons.language, () {
+          Get.snackbar(
+            'Coming Soon',
+            'This feature is under development',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }, isDarkMode),
+        _buildOptionItem(context, 'Data Usage', Icons.data_usage, () {
+          Get.snackbar(
+            'Coming Soon',
+            'This feature is under development',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }, isDarkMode),
       ],
     );
   }
-  
+
   Widget _buildSupportAndAbout(BuildContext context, bool isDarkMode) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,40 +294,28 @@ class AccountScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _buildOptionItem(
-          context,
-          'Help Center',
-          Icons.help_outline,
-          () {
-            Get.snackbar(
-              'Help Center',
-              'This would navigate to the help center',
-              snackPosition: SnackPosition.BOTTOM,
-            );
-          },
-          isDarkMode,
-        ),
-        _buildOptionItem(
-          context,
-          'About Chewata',
-          Icons.info_outline,
-          () {
-            Get.snackbar(
-              'About Chewata',
-              'This would navigate to the about page',
-              snackPosition: SnackPosition.BOTTOM,
-            );
-          },
-          isDarkMode,
-        ),
+        _buildOptionItem(context, 'Help Center', Icons.help_outline, () {
+          Get.snackbar(
+            'Coming Soon',
+            'This feature is under development',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }, isDarkMode),
+        _buildOptionItem(context, 'About Chewata', Icons.info_outline, () {
+          Get.snackbar(
+            'Coming Soon',
+            'This feature is under development',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }, isDarkMode),
         _buildOptionItem(
           context,
           'Terms & Privacy Policy',
           Icons.description_outlined,
           () {
             Get.snackbar(
-              'Terms & Privacy Policy',
-              'This would navigate to the terms and privacy policy page',
+              'Coming Soon',
+              'This feature is under development',
               snackPosition: SnackPosition.BOTTOM,
             );
           },
@@ -324,11 +324,11 @@ class AccountScreen extends StatelessWidget {
       ],
     );
   }
-  
+
   Widget _buildOptionItem(
-    BuildContext context, 
-    String title, 
-    IconData icon, 
+    BuildContext context,
+    String title,
+    IconData icon,
     VoidCallback onTap,
     bool isDarkMode,
   ) {
@@ -368,7 +368,7 @@ class AccountScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildLogoutButton(BuildContext context, bool isDarkMode) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -399,7 +399,7 @@ class AccountScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   void _showLogoutConfirmationDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -418,20 +418,21 @@ class AccountScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).pop();
                 // Logout logic
-                Get.find<AuthController>().logout();
+                AuthService.instance.logout();
               },
               child: const Text('Log Out'),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
             ),
           ],
         );
       },
     );
   }
-  
-  void _showThemeSelectionDialog(BuildContext context, ThemeController themeController) {
+
+  void _showThemeSelectionDialog(
+    BuildContext context,
+    ThemeController themeController,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -485,7 +486,7 @@ class AccountScreen extends StatelessWidget {
       },
     );
   }
-  
+
   Widget _buildThemeOption(
     BuildContext context,
     String title,
@@ -496,7 +497,10 @@ class AccountScreen extends StatelessWidget {
     return ListTile(
       title: Text(title),
       leading: Icon(icon),
-      trailing: isSelected ? Icon(Icons.check, color: Theme.of(context).primaryColor) : null,
+      trailing:
+          isSelected
+              ? Icon(Icons.check, color: Theme.of(context).primaryColor)
+              : null,
       onTap: () {
         onTap();
         Navigator.of(context).pop();
