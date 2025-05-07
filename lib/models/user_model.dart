@@ -1,4 +1,3 @@
-// lib/models/user_model.dart
 class UserModel {
   final String id;
   final String fullName;
@@ -16,7 +15,6 @@ class UserModel {
     required this.createdAt,
   });
   
-  // Convert UserModel to Map
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -28,7 +26,6 @@ class UserModel {
     };
   }
   
-  // Create UserModel from Map
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       id: map['id'] ?? '',
