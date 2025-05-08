@@ -10,7 +10,7 @@ import 'package:chewata/services/auth_service.dart';
 class ChatController extends GetxController {
   final ChatService _chatService = ChatService.instance;
   final AuthService _authService = AuthService.instance;
-  
+
   // Reactive variables
   final RxList<ChatModel> userChats = <ChatModel>[].obs;
   final RxList<MessageModel> currentChatMessages = <MessageModel>[].obs;
@@ -21,17 +21,22 @@ class ChatController extends GetxController {
   final RxBool isLoadingMessages = false.obs;
   final Rx<UserModel?> searchedUser = Rx<UserModel?>(null);
 
-  // Add a map to track active subscriptions
-final Map<String, StreamSubscription> _statusSubscriptions = {};
+  final RxBool isInitialLoading = true.obs;
+  final RxInt chatBatchSize = 10.obs;
+  final RxInt currentChatBatchIndex = 0.obs;
+  final RxBool hasMoreChats = true.obs;
+  List<ChatModel> _allChats = [];
 
-  
+  // Add a map to track active subscriptions
+  final Map<String, StreamSubscription> _statusSubscriptions = {};
+
   // Store the current user for convenience
   UserModel? get currentUser => _authService.userModel.value;
-  
+
   @override
   void onInit() {
     super.onInit();
-    
+
     // Only listen to chats when user is authenticated
     _authService.userModel.listen((user) {
       if (user != null) {
@@ -45,20 +50,73 @@ final Map<String, StreamSubscription> _statusSubscriptions = {};
       }
     });
   }
-  
+
   // Listen for user chats
   void _listenToUserChats() {
-    _chatService.getUserChats().listen((chats) {
-      userChats.value = chats;
+    isInitialLoading.value = true;
 
-      // Load user info for each chat participant
-      for (final chat in chats) {
-        _loadChatUsers(chat);
-      }
+    _chatService.getUserChats().listen((chats) {
+      _allChats = chats;
+
+      // Reset pagination state
+      currentChatBatchIndex.value = 0;
+      hasMoreChats.value = true;
+
+      // Load the first batch
+      _loadNextChatBatch();
+
+      isInitialLoading.value = false;
     });
   }
-  
-    // Modify the _loadChatUsers method to start listening to status
+
+  // Add this new method for lazy loading
+  void _loadNextChatBatch() {
+    if (!hasMoreChats.value) return;
+
+    final startIndex = currentChatBatchIndex.value * chatBatchSize.value;
+    final endIndex = startIndex + chatBatchSize.value;
+
+    if (startIndex >= _allChats.length) {
+      hasMoreChats.value = false;
+      return;
+    }
+
+    final batch = _allChats.sublist(
+      startIndex,
+      endIndex > _allChats.length ? _allChats.length : endIndex,
+    );
+
+    // If this is the first batch, replace the list
+    if (currentChatBatchIndex.value == 0) {
+      userChats.value = batch;
+    } else {
+      // Otherwise, add to existing list
+      userChats.addAll(batch);
+    }
+
+    // Update index
+    currentChatBatchIndex.value++;
+
+    // Update hasMore flag
+    hasMoreChats.value = endIndex < _allChats.length;
+
+    // Load user info for each chat participant in this batch
+    for (final chat in batch) {
+      _loadChatUsers(chat);
+    }
+  }
+
+  // Add this method to load more chats
+  void loadMoreChats() {
+    if (!hasMoreChats.value || isLoading.value) return;
+    isLoading.value = true;
+
+    _loadNextChatBatch();
+
+    isLoading.value = false;
+  }
+
+  // Modify the _loadChatUsers method to start listening to status
   Future<void> _loadChatUsers(ChatModel chat) async {
     for (final userId in chat.participants) {
       if (userId != _authService.firebaseUser.value?.uid) {
@@ -68,23 +126,23 @@ final Map<String, StreamSubscription> _statusSubscriptions = {};
           chatUsers[userId] = userInfo;
           userOnlineStatus[userId] = userInfo.isOnline;
           userLastSeen[userId] = userInfo.lastSeen;
-          
+
           // Start listening to status changes
           listenToUserStatus(userId);
         }
       }
     }
   }
-  
+
   // Search for a user by email
   Future<void> searchUserByEmail(String email) async {
     if (email.isEmpty) {
       searchedUser.value = null;
       return;
     }
-    
+
     isSearching.value = true;
-    
+
     try {
       // Don't search for current user's email
       if (_authService.userModel.value?.email == email) {
@@ -92,10 +150,10 @@ final Map<String, StreamSubscription> _statusSubscriptions = {};
         searchedUser.value = null;
         return;
       }
-      
+
       final user = await _chatService.searchUserByEmail(email);
       searchedUser.value = user;
-      
+
       if (user == null) {
         Get.snackbar('User Not Found', 'No user found with this email');
       }
@@ -106,24 +164,24 @@ final Map<String, StreamSubscription> _statusSubscriptions = {};
       isSearching.value = false;
     }
   }
-  
+
   // Create a new chat or get existing chat
   Future<void> createOrGetChatWithUser(String userId) async {
     isLoading.value = true;
-    
+
     try {
       final chat = await _chatService.createOrGetChat(userId);
-      
+
       if (chat != null) {
         selectedChatId.value = chat.id;
         loadChatMessages(chat.id);
-        
+
         if (!userChats.any((c) => c.id == chat.id)) {
           userChats.add(chat);
         }
-        
+
         searchedUser.value = null; // Clear search state
-        
+
         // Close search screen and navigate to chat
         Get.until((route) => route.isFirst); // Return to home
         Get.toNamed('/chat/${chat.id}');
@@ -137,44 +195,45 @@ final Map<String, StreamSubscription> _statusSubscriptions = {};
       isLoading.value = false;
     }
   }
-  
+
   // Load messages for a specific chat
-    
+
   void loadChatMessagesWithAutoRead(String chatId) {
     isLoadingMessages.value = true;
     selectedChatId.value = chatId;
-    
+
     // Get the chat to find the other user's ID
     final chat = userChats.firstWhere(
       (c) => c.id == chatId,
       orElse: () => null as dynamic,
     );
-    
+
     if (chat != null) {
       final otherUserId = chat.participants.firstWhere(
         (id) => id != _authService.firebaseUser.value?.uid,
         orElse: () => '',
       );
-      
+
       // Mark messages from other user as delivered when opening the chat
       if (otherUserId.isNotEmpty) {
         _chatService.markMessagesAsDelivered(chatId, otherUserId);
       }
     }
-  
-  // Mark chat as read
-  _chatService.markChatAsRead(chatId);
-  
-  // Subscribe to messages stream
-  _chatService.getChatMessages(chatId).listen((messages) {
-    currentChatMessages.value = messages;
-    isLoadingMessages.value = false;
-  });
-}
+
+    // Mark chat as read
+    _chatService.markChatAsRead(chatId);
+
+    // Subscribe to messages stream
+    _chatService.getChatMessages(chatId).listen((messages) {
+      currentChatMessages.value = messages;
+      isLoadingMessages.value = false;
+    });
+  }
+
   // Send a message
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty || selectedChatId.value.isEmpty) return;
-    
+
     try {
       await _chatService.sendMessage(selectedChatId.value, text.trim());
     } catch (e) {
@@ -182,7 +241,7 @@ final Map<String, StreamSubscription> _statusSubscriptions = {};
       print('Send message error: $e');
     }
   }
-  
+
   // Clear selection when exiting a chat
   void clearSelectedChat() {
     selectedChatId.value = '';
@@ -190,162 +249,165 @@ final Map<String, StreamSubscription> _statusSubscriptions = {};
     searchedUser.value = null; // Also clear search state
   }
 
-    // Add to ChatController class
+  // Add to ChatController class
   final RxMap<String, bool> userOnlineStatus = <String, bool>{}.obs;
   final RxMap<String, DateTime?> userLastSeen = <String, DateTime?>{}.obs;
 
   // Add this method to listen to real-time status changes
   void listenToUserStatus(String userId) {
     if (userId.isEmpty) return;
-    
+
     // Don't create duplicate subscriptions
     if (_statusSubscriptions.containsKey(userId)) {
       print('Already listening to status for user: $userId');
       return;
     }
-    
+
     print('Starting to listen to status for user: $userId');
-    
+
     // Listen to changes in the user's status
-    final subscription = _chatService.listenToUserOnlineStatus(userId).listen((userData) {
+    final subscription = _chatService.listenToUserOnlineStatus(userId).listen((
+      userData,
+    ) {
       if (userData != null) {
         final bool wasOnline = userOnlineStatus[userId] ?? false;
         final bool isNowOnline = userData.isOnline;
-        
-        print('Status update for $userId: online=$isNowOnline, lastSeen=${userData.lastSeen}');
-        
+
+        print(
+          'Status update for $userId: online=$isNowOnline, lastSeen=${userData.lastSeen}',
+        );
+
         // Only update if there's an actual change to avoid UI flicker
-        if (wasOnline != isNowOnline || 
-            (userData.lastSeen != null && userLastSeen[userId] != userData.lastSeen)) {
+        if (wasOnline != isNowOnline ||
+            (userData.lastSeen != null &&
+                userLastSeen[userId] != userData.lastSeen)) {
           userOnlineStatus[userId] = isNowOnline;
           userLastSeen[userId] = userData.lastSeen;
         }
       }
     });
-    
+
     // Store the subscription
     _statusSubscriptions[userId] = subscription;
   }
-      
+
   // Get chat partner's name for display
   String getChatName(ChatModel chat) {
     final otherUserId = chat.participants.firstWhere(
       (id) => id != _authService.firebaseUser.value?.uid,
       orElse: () => 'Unknown',
     );
-    
+
     return chatUsers[otherUserId]?.fullName ?? 'Unknown User';
   }
-  
+
   // Get chat partner's profile picture
   String? getChatProfilePic(ChatModel chat) {
     final otherUserId = chat.participants.firstWhere(
       (id) => id != _authService.firebaseUser.value?.uid,
       orElse: () => '',
     );
-    
+
     return chatUsers[otherUserId]?.profilePicUrl;
   }
-  
+
   // Get unread message count for a chat
   int getUnreadCount(ChatModel chat) {
     final userId = _authService.firebaseUser.value?.uid;
     if (userId == null) return 0;
-    
+
     return chat.unreadCount[userId] ?? 0;
   }
-  
-
 
   @override
   void onClose() {
     _messagesSubscription?.cancel();
-    
+
     // Cancel all status subscriptions
     for (final subscription in _statusSubscriptions.values) {
       subscription.cancel();
     }
     _statusSubscriptions.clear();
-    
+
     selectedChatId.value = '';
     currentChatMessages.clear();
     super.onClose();
   }
 
-
   // Add to ChatController class
-void refreshChats() {
-  print("Manually refreshing chats for user: ${currentUser?.id}");
-  userChats.clear();
-  chatUsers.clear();
-  _listenToUserChats();
-}
+  void refreshChats() {
+    print("Manually refreshing chats for user: ${currentUser?.id}");
+    userChats.clear();
+    chatUsers.clear();
+    _listenToUserChats();
+  }
 
+  // Add to ChatController class properties
+  StreamSubscription<List<MessageModel>>? _messagesSubscription;
 
+  // Modify the loadChatMessages method
+  void loadChatMessages(String chatId) {
+    isLoadingMessages.value = true;
+    selectedChatId.value = chatId;
 
-// Add to ChatController class properties
-StreamSubscription<List<MessageModel>>? _messagesSubscription;
-
-// Modify the loadChatMessages method
-void loadChatMessages(String chatId) {
-  isLoadingMessages.value = true;
-  selectedChatId.value = chatId;
-  
-  // Get the chat to find the other user's ID
-  final chat = userChats.firstWhere(
-    (c) => c.id == chatId,
-    orElse: () => null as dynamic,
-  );
-  
-  if (chat != null) {
-    final otherUserId = chat.participants.firstWhere(
-      (id) => id != _authService.firebaseUser.value?.uid,
-      orElse: () => '',
+    // Get the chat to find the other user's ID
+    final chat = userChats.firstWhere(
+      (c) => c.id == chatId,
+      orElse: () => null as dynamic,
     );
-    
-    // Mark messages from other user as delivered when opening the chat
-    if (otherUserId.isNotEmpty) {
-      _chatService.markMessagesAsDelivered(chatId, otherUserId);
-    }
-  }
 
-  // Mark chat as read initially
-  _chatService.markChatAsRead(chatId);
-  
-  // Cancel any existing subscription
-  _messagesSubscription?.cancel();
-  
-  // Subscribe to messages stream with auto-read functionality
-  _messagesSubscription = _chatService.getChatMessages(chatId).listen((messages) {
-    currentChatMessages.value = messages;
-    isLoadingMessages.value = false;
-    
-    // If we're in the chat and there are unread messages from other users, mark them as read
-    if (selectedChatId.value == chatId) {
-      _markNewMessagesAsRead(messages, chatId);
-    }
-  });
-}
+    if (chat != null) {
+      final otherUserId = chat.participants.firstWhere(
+        (id) => id != _authService.firebaseUser.value?.uid,
+        orElse: () => '',
+      );
 
-// Add this new method to mark new messages as read
-void _markNewMessagesAsRead(List<MessageModel> messages, String chatId) {
-  final userId = _authService.firebaseUser.value?.uid;
-  if (userId == null) return;
-  
-  // Check if there are any unread messages from other users
-  final hasUnreadMessages = messages.any((msg) => 
-    msg.senderId != userId && !msg.isRead);
-  
-  if (hasUnreadMessages) {
-    // Mark them as read
+      // Mark messages from other user as delivered when opening the chat
+      if (otherUserId.isNotEmpty) {
+        _chatService.markMessagesAsDelivered(chatId, otherUserId);
+      }
+    }
+
+    // Mark chat as read initially
     _chatService.markChatAsRead(chatId);
-  }
-}
 
-// Add the suggested method
-void markCurrentChatMessagesAsRead() {
-  if (selectedChatId.value.isNotEmpty) {
-    _chatService.markChatAsRead(selectedChatId.value);
+    // Cancel any existing subscription
+    _messagesSubscription?.cancel();
+
+    // Subscribe to messages stream with auto-read functionality
+    _messagesSubscription = _chatService.getChatMessages(chatId).listen((
+      messages,
+    ) {
+      currentChatMessages.value = messages;
+      isLoadingMessages.value = false;
+
+      // If we're in the chat and there are unread messages from other users, mark them as read
+      if (selectedChatId.value == chatId) {
+        _markNewMessagesAsRead(messages, chatId);
+      }
+    });
   }
-}
+
+  // Add this new method to mark new messages as read
+  void _markNewMessagesAsRead(List<MessageModel> messages, String chatId) {
+    final userId = _authService.firebaseUser.value?.uid;
+    if (userId == null) return;
+
+    // Check if there are any unread messages from other users
+    final hasUnreadMessages = messages.any(
+      (msg) => msg.senderId != userId && !msg.isRead,
+    );
+
+    if (hasUnreadMessages) {
+      // Mark them as read
+      _chatService.markChatAsRead(chatId);
+    }
+  }
+
+  // Add the suggested method
+  void markCurrentChatMessagesAsRead() {
+    if (selectedChatId.value.isNotEmpty) {
+      _chatService.markChatAsRead(selectedChatId.value);
+    }
+  }
 }
