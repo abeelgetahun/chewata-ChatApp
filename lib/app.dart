@@ -10,6 +10,7 @@ import 'package:chewata/screen/home_screen.dart';
 import 'package:chewata/screen/onboarding/onboarding.dart';
 import 'package:chewata/services/auth_service.dart';
 import 'package:chewata/services/chat_service.dart';
+import 'package:chewata/services/setting_service.dart';
 import 'package:chewata/utils/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -27,6 +28,8 @@ class App extends StatelessWidget {
     Get.put(AppLifecycleService(), permanent: true);
     // Add this line in the App class's build method, after existing Get.put statements:
     Get.put(AccountController(), permanent: true);
+
+    Get.put(SettingsService());
     // Get theme controller
 
     final ThemeController themeController = Get.find<ThemeController>();

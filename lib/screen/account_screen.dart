@@ -1,4 +1,5 @@
 // lib/screen/account_screen.dart
+import 'package:chewata/controller/privacy_setting_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:chewata/controller/account_controller.dart';
@@ -147,38 +148,6 @@ class AccountScreen extends StatelessWidget {
                 color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
               ),
             ),
-
-            const SizedBox(height: 16),
-
-            // Edit profile button
-            OutlinedButton.icon(
-              onPressed: () {
-                // Navigate to edit profile screen
-                Get.to(
-                  () => const PersonalInfoScreen(),
-                  transition: Transition.rightToLeft,
-                );
-              },
-              icon: Icon(
-                Icons.edit,
-                size: 18,
-                color: isDarkMode ? Colors.white : Colors.black,
-              ),
-              label: Text(
-                'Edit Profile',
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
           ],
         ),
       );
@@ -209,26 +178,6 @@ class AccountScreen extends StatelessWidget {
             Get.to(
               () => const PersonalInfoScreen(),
               transition: Transition.rightToLeft,
-            );
-          },
-          isDarkMode,
-        ),
-        _buildOptionItem(context, 'Privacy & Security', Icons.security, () {
-          Get.snackbar(
-            'Coming Soon',
-            'This feature is under development',
-            snackPosition: SnackPosition.BOTTOM,
-          );
-        }, isDarkMode),
-        _buildOptionItem(
-          context,
-          'Notification Settings',
-          Icons.notifications_none,
-          () {
-            Get.snackbar(
-              'Coming Soon',
-              'This feature is under development',
-              snackPosition: SnackPosition.BOTTOM,
             );
           },
           isDarkMode,
@@ -267,6 +216,15 @@ class AccountScreen extends StatelessWidget {
             snackPosition: SnackPosition.BOTTOM,
           );
         }, isDarkMode),
+        _buildOptionItem(
+          context,
+          'Privacy & Notifications',
+          Icons.security,
+          () {
+            _showPrivacyAndNotificationsDialog(context, isDarkMode);
+          },
+          isDarkMode,
+        ),
         _buildOptionItem(context, 'Data Usage', Icons.data_usage, () {
           Get.snackbar(
             'Coming Soon',
@@ -507,4 +465,223 @@ class AccountScreen extends StatelessWidget {
       },
     );
   }
+}
+
+void _showPrivacyAndNotificationsDialog(BuildContext context, bool isDarkMode) {
+  // Ensure the controller is registered
+  if (!Get.isRegistered<PrivacySettingsController>()) {
+    Get.put(PrivacySettingsController());
+  }
+
+  final PrivacySettingsController controller =
+      Get.find<PrivacySettingsController>();
+
+  // Make sure we have the latest settings
+  controller.loadCurrentSettings();
+
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Dismiss',
+    barrierColor: Colors.black.withOpacity(0.5),
+    transitionDuration: const Duration(milliseconds: 300),
+    pageBuilder: (context, animation1, animation2) => Container(), // Not used
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curvedAnimation = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutBack,
+      );
+
+      return ScaleTransition(
+        scale: curvedAnimation,
+        child: FadeTransition(
+          opacity: animation,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            backgroundColor: isDarkMode ? Colors.grey[850] : Colors.white,
+            title: Text(
+              'Privacy & Notifications',
+              style: TextStyle(
+                color: isDarkMode ? Colors.white : Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Obx(() {
+              return SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Online Status
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Online Status',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Show others when you are online',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Show Online Status',
+                                style: TextStyle(
+                                  color:
+                                      isDarkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+                              Switch(
+                                value: controller.showOnlineStatus.value,
+                                onChanged:
+                                    controller.isLoading.value
+                                        ? null
+                                        : (value) async {
+                                          final success = await controller
+                                              .updateOnlineStatusVisibility(
+                                                value,
+                                              );
+                                          if (!success) {
+                                            Get.snackbar(
+                                              'Error',
+                                              'Failed to update online status preference',
+                                              snackPosition:
+                                                  SnackPosition.BOTTOM,
+                                            );
+                                          }
+                                        },
+                                activeColor: Theme.of(context).primaryColor,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Notifications
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Notifications',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Manage notification preferences',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Enable Message Notifications',
+                                style: TextStyle(
+                                  color:
+                                      isDarkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+                              Switch(
+                                value: controller.enableNotifications.value,
+                                onChanged:
+                                    controller.isLoading.value
+                                        ? null
+                                        : (value) async {
+                                          final success = await controller
+                                              .updateNotificationPreference(
+                                                value,
+                                              );
+                                          if (!success) {
+                                            Get.snackbar(
+                                              'Error',
+                                              'Failed to update notification preference',
+                                              snackPosition:
+                                                  SnackPosition.BOTTOM,
+                                            );
+                                          }
+                                        },
+                                activeColor: Theme.of(context).primaryColor,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    if (controller.isLoading.value)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Center(
+                          child: SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).primaryColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text(
+                  'Close',
+                  style: TextStyle(color: Theme.of(context).primaryColor),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

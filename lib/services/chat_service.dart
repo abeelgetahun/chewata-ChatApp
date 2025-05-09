@@ -8,31 +8,32 @@ import 'package:chewata/services/auth_service.dart';
 
 class ChatService extends GetxService {
   static ChatService get instance => Get.find();
-  
+
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final AuthService _authService = AuthService.instance;
-  
+
   // Collection references
-  final CollectionReference _chatsCollection = 
-      FirebaseFirestore.instance.collection('chats');
-  final CollectionReference _usersCollection = 
-      FirebaseFirestore.instance.collection('users');
-  
+  final CollectionReference _chatsCollection = FirebaseFirestore.instance
+      .collection('chats');
+  final CollectionReference _usersCollection = FirebaseFirestore.instance
+      .collection('users');
+
   // Get current user ID
   String? get currentUserId => _authService.firebaseUser.value?.uid;
-  
+
   // Search user by email
   Future<UserModel?> searchUserByEmail(String email) async {
     try {
-      final querySnapshot = await _usersCollection
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-      
+      final querySnapshot =
+          await _usersCollection
+              .where('email', isEqualTo: email)
+              .limit(1)
+              .get();
+
       if (querySnapshot.docs.isEmpty) {
         return null;
       }
-      
+
       final userData = querySnapshot.docs.first.data() as Map<String, dynamic>;
       return UserModel.fromMap(userData);
     } catch (e) {
@@ -42,21 +43,40 @@ class ChatService extends GetxService {
   }
 
   // In chat_service.dart, add this enhanced method for status listening
+  // Add this to chat_service.dart
   Stream<UserModel?> listenToUserOnlineStatus(String userId) {
-    // Create a merged stream that combines Firestore and Realtime Database changes
-    return _usersCollection.doc(userId)
-        .snapshots()
-        .map((snapshot) {
-          if (!snapshot.exists) return null;
-          try {
-            return UserModel.fromMap(snapshot.data() as Map<String, dynamic>);
-          } catch (e) {
-            print('Error parsing user data: $e');
-            return null;
-          }
-        });
+    return _usersCollection.doc(userId).snapshots().map((snapshot) {
+      if (!snapshot.exists) return null;
+      try {
+        UserModel user = UserModel.fromMap(
+          snapshot.data() as Map<String, dynamic>,
+        );
+
+        // If user has hidden their online status, we treat them as offline
+        if (!user.showOnlineStatus) {
+          // Create a new instance with isOnline set to false
+          return UserModel(
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            birthDate: user.birthDate,
+            profilePicUrl: user.profilePicUrl,
+            createdAt: user.createdAt,
+            isOnline: false,
+            lastSeen: user.lastSeen,
+            showOnlineStatus: false,
+            enableNotifications: user.enableNotifications,
+          );
+        }
+
+        return user;
+      } catch (e) {
+        print('Error parsing user data: $e');
+        return null;
+      }
+    });
   }
-  
+
   // Create a new chat or get existing chat between two users
   Future<ChatModel?> createOrGetChat(String otherUserId) async {
     try {
@@ -69,7 +89,10 @@ class ChatService extends GetxService {
       }
 
       // Check if chat already exists
-      final existingChat = await findChatBetweenUsers(currentUserId!, otherUserId);
+      final existingChat = await findChatBetweenUsers(
+        currentUserId!,
+        otherUserId,
+      );
       if (existingChat != null) {
         return existingChat;
       }
@@ -80,16 +103,16 @@ class ChatService extends GetxService {
         id: '', // Will be set after document creation
         participants: participants,
         createdAt: DateTime.now(),
-        unreadCount: {
-          currentUserId!: 0,
-          otherUserId: 0,
-        },
+        unreadCount: {currentUserId!: 0, otherUserId: 0},
       );
 
       final docRef = await _chatsCollection.add(chatData.toMap());
       final createdChat = await docRef.get();
       if (createdChat.exists) {
-        return ChatModel.fromMap(createdChat.data() as Map<String, dynamic>, docRef.id);
+        return ChatModel.fromMap(
+          createdChat.data() as Map<String, dynamic>,
+          docRef.id,
+        );
       } else {
         throw Exception('Failed to create chat');
       }
@@ -98,30 +121,34 @@ class ChatService extends GetxService {
       return null; // Return null if chat creation fails
     }
   }
-  
+
   // Find an existing chat between two users
-  Future<ChatModel?> findChatBetweenUsers(String userId1, String userId2) async {
+  Future<ChatModel?> findChatBetweenUsers(
+    String userId1,
+    String userId2,
+  ) async {
     try {
-      final querySnapshot = await _chatsCollection
-          .where('participants', arrayContains: userId1)
-          .get();
-      
+      final querySnapshot =
+          await _chatsCollection
+              .where('participants', arrayContains: userId1)
+              .get();
+
       for (final doc in querySnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final participants = List<String>.from(data['participants'] ?? []);
-        
+
         if (participants.contains(userId2)) {
           return ChatModel.fromMap(data, doc.id);
         }
       }
-      
+
       return null;
     } catch (e) {
       print('Error finding chat: $e');
       return null;
     }
   }
-  
+
   // Get all chats for current user
   Stream<List<ChatModel>> getUserChats() {
     if (currentUserId == null) {
@@ -138,7 +165,7 @@ class ChatService extends GetxService {
               print('No chats found for user $currentUserId');
               return [];
             }
-            
+
             return snapshot.docs.map((doc) {
               // Add logging to help debug
               print('Processing chat: ${doc.id}');
@@ -152,7 +179,6 @@ class ChatService extends GetxService {
         });
   }
 
-  
   // Get messages for a specific chat
   Stream<List<MessageModel>> getChatMessages(String chatId) {
     return _chatsCollection
@@ -164,12 +190,12 @@ class ChatService extends GetxService {
           return snapshot.docs.map((doc) {
             return MessageModel.fromMap(
               doc.data() as Map<String, dynamic>,
-              doc.id
+              doc.id,
             );
           }).toList();
         });
   }
-  
+
   // Send a message
   // In chat_service.dart, modify the sendMessage method
   Future<bool> sendMessage(String chatId, String text) async {
@@ -177,19 +203,19 @@ class ChatService extends GetxService {
       if (currentUserId == null) {
         throw Exception('User not authenticated');
       }
-      
+
       final chatDoc = await _chatsCollection.doc(chatId).get();
       if (!chatDoc.exists) {
         throw Exception('Chat does not exist');
       }
-      
+
       final chatData = chatDoc.data() as Map<String, dynamic>;
       final participants = List<String>.from(chatData['participants'] ?? []);
-      
+
       if (!participants.contains(currentUserId)) {
         throw Exception('User not in this chat');
       }
-      
+
       // Create message
       final message = MessageModel(
         id: '',
@@ -200,30 +226,30 @@ class ChatService extends GetxService {
         isRead: false,
         isDelivered: false, // Initialize as not delivered
       );
-      
+
       // Add message to subcollection
       final messageRef = await _chatsCollection
           .doc(chatId)
           .collection('messages')
           .add(message.toMap());
-      
+
       // Update chat with last message info
       final unreadCount = Map<String, int>.from(chatData['unreadCount'] ?? {});
-      
+
       // Increment unread count for all participants except sender
       for (final participant in participants) {
         if (participant != currentUserId) {
           unreadCount[participant] = (unreadCount[participant] ?? 0) + 1;
         }
       }
-      
+
       await _chatsCollection.doc(chatId).update({
         'lastMessageText': text,
         'lastMessageTime': message.sentAt,
         'lastMessageSenderId': currentUserId,
         'unreadCount': unreadCount,
       });
-      
+
       return true;
     } catch (e) {
       print('Error sending message: $e');
@@ -235,22 +261,23 @@ class ChatService extends GetxService {
   Future<void> markMessagesAsDelivered(String chatId, String senderId) async {
     try {
       if (currentUserId == null) return;
-      
+
       // Only mark other user's messages as delivered
       if (currentUserId == senderId) return;
-      
+
       final batch = _db.batch();
-      final messagesSnapshot = await _chatsCollection
-          .doc(chatId)
-          .collection('messages')
-          .where('senderId', isEqualTo: senderId)
-          .where('isDelivered', isEqualTo: false)
-          .get();
-      
+      final messagesSnapshot =
+          await _chatsCollection
+              .doc(chatId)
+              .collection('messages')
+              .where('senderId', isEqualTo: senderId)
+              .where('isDelivered', isEqualTo: false)
+              .get();
+
       for (final doc in messagesSnapshot.docs) {
         batch.update(doc.reference, {'isDelivered': true});
       }
-      
+
       await batch.commit();
     } catch (e) {
       print('Error marking messages as delivered: $e');
@@ -259,60 +286,57 @@ class ChatService extends GetxService {
 
   // Modify the markChatAsRead method
   // Improve the markChatAsRead method in ChatService class
-Future<void> markChatAsRead(String chatId) async {
-  try {
-    if (currentUserId == null) return;
+  Future<void> markChatAsRead(String chatId) async {
+    try {
+      if (currentUserId == null) return;
 
-    // Get chat document
-    final chatDoc = await _chatsCollection.doc(chatId).get();
-    if (!chatDoc.exists) return;
+      // Get chat document
+      final chatDoc = await _chatsCollection.doc(chatId).get();
+      if (!chatDoc.exists) return;
 
-    final chatData = chatDoc.data() as Map<String, dynamic>;
-    final unreadCount = Map<String, int>.from(chatData['unreadCount'] ?? {});
+      final chatData = chatDoc.data() as Map<String, dynamic>;
+      final unreadCount = Map<String, int>.from(chatData['unreadCount'] ?? {});
 
-    // If no unread messages for current user, no need to update
-    if ((unreadCount[currentUserId!] ?? 0) == 0) return;
+      // If no unread messages for current user, no need to update
+      if ((unreadCount[currentUserId!] ?? 0) == 0) return;
 
-    // Reset unread count for current user
-    unreadCount[currentUserId!] = 0;
+      // Reset unread count for current user
+      unreadCount[currentUserId!] = 0;
 
-    // Update chat document
-    await _chatsCollection.doc(chatId).update({
-      'unreadCount': unreadCount,
-    });
+      // Update chat document
+      await _chatsCollection.doc(chatId).update({'unreadCount': unreadCount});
 
-    // Only query messages that are actually unread
-    final messagesSnapshot = await _chatsCollection
-        .doc(chatId)
-        .collection('messages')
-        .where('senderId', isNotEqualTo: currentUserId)
-        .where('isRead', isEqualTo: false)
-        .get();
+      // Only query messages that are actually unread
+      final messagesSnapshot =
+          await _chatsCollection
+              .doc(chatId)
+              .collection('messages')
+              .where('senderId', isNotEqualTo: currentUserId)
+              .where('isRead', isEqualTo: false)
+              .get();
 
-    if (messagesSnapshot.docs.isNotEmpty) {
-      final batch = _db.batch();
-      
-      for (final doc in messagesSnapshot.docs) {
-        batch.update(doc.reference, {
-          'isRead': true,
-        });
+      if (messagesSnapshot.docs.isNotEmpty) {
+        final batch = _db.batch();
+
+        for (final doc in messagesSnapshot.docs) {
+          batch.update(doc.reference, {'isRead': true});
+        }
+
+        await batch.commit();
       }
-
-      await batch.commit();
+    } catch (e) {
+      print('Error marking chat as read: $e');
     }
-  } catch (e) {
-    print('Error marking chat as read: $e');
   }
-}
 
- // Get user info for chat participants
+  // Get user info for chat participants
   Future<UserModel?> getUserInfo(String userId) async {
     try {
       final doc = await _usersCollection.doc(userId).get();
       if (!doc.exists) return null;
-      
+
       final data = doc.data() as Map<String, dynamic>;
-      
+
       // Include online status in user info
       return UserModel.fromMap(data);
     } catch (e) {
@@ -320,7 +344,4 @@ Future<void> markChatAsRead(String chatId) async {
       return null;
     }
   }
-
-
-  
 }

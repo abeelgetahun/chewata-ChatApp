@@ -1,5 +1,4 @@
-// In user_model.dart, update the UserModel class
-
+// In user_model.dart, add a notification preference field
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
@@ -11,7 +10,9 @@ class UserModel {
   final DateTime createdAt;
   final bool isOnline;
   final DateTime? lastSeen;
-  
+  final bool showOnlineStatus; // Add this field
+  final bool enableNotifications; // Add this field
+
   UserModel({
     required this.id,
     required this.fullName,
@@ -21,9 +22,11 @@ class UserModel {
     required this.createdAt,
     this.isOnline = false,
     this.lastSeen,
+    this.showOnlineStatus = true, // Default to showing online status
+    this.enableNotifications = true, // Default to notifications enabled
   });
-  
-  // Convert UserModel to Map
+
+  // Update toMap method to include new fields
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -34,42 +37,50 @@ class UserModel {
       'createdAt': createdAt.toIso8601String(),
       'isOnline': isOnline,
       'lastSeen': lastSeen?.toIso8601String(),
+      'showOnlineStatus': showOnlineStatus,
+      'enableNotifications': enableNotifications,
     };
   }
-  
-  // Create UserModel from Map
+
+  // Update fromMap to handle the new fields
   factory UserModel.fromMap(Map<String, dynamic> map) {
     DateTime? parseLastSeen(dynamic lastSeenValue) {
-      if (lastSeenValue == null) return null;
-      
-      if (lastSeenValue is Timestamp) {
-        return lastSeenValue.toDate();
-      } else if (lastSeenValue is DateTime) {
-        return lastSeenValue;
-      } else if (lastSeenValue is String) {
-        try {
-          return DateTime.parse(lastSeenValue);
-        } catch (e) {
-          print('Error parsing lastSeen string: $e');
-          return null;
+      DateTime? parseLastSeen(dynamic lastSeenValue) {
+        if (lastSeenValue == null) return null;
+
+        if (lastSeenValue is Timestamp) {
+          return lastSeenValue.toDate();
+        } else if (lastSeenValue is DateTime) {
+          return lastSeenValue;
+        } else if (lastSeenValue is String) {
+          try {
+            return DateTime.parse(lastSeenValue);
+          } catch (e) {
+            print('Error parsing lastSeen string: $e');
+            return null;
+          }
         }
+        return null;
       }
-      return null;
     }
-    
+
     return UserModel(
       id: map['id'] ?? '',
       fullName: map['fullName'] ?? '',
       email: map['email'] ?? '',
-      birthDate: map['birthDate'] is Timestamp 
-          ? (map['birthDate'] as Timestamp).toDate()
-          : DateTime.parse(map['birthDate']),
+      birthDate:
+          map['birthDate'] is Timestamp
+              ? (map['birthDate'] as Timestamp).toDate()
+              : DateTime.parse(map['birthDate']),
       profilePicUrl: map['profilePicUrl'] ?? '',
-      createdAt: map['createdAt'] is Timestamp
-          ? (map['createdAt'] as Timestamp).toDate()
-          : DateTime.parse(map['createdAt']),
+      createdAt:
+          map['createdAt'] is Timestamp
+              ? (map['createdAt'] as Timestamp).toDate()
+              : DateTime.parse(map['createdAt']),
       isOnline: map['isOnline'] ?? false,
       lastSeen: parseLastSeen(map['lastSeen']),
+      showOnlineStatus: map['showOnlineStatus'] ?? true,
+      enableNotifications: map['enableNotifications'] ?? true,
     );
   }
 }
