@@ -316,6 +316,32 @@ class AuthService extends GetxController {
     super.onClose();
   }
 
+  // Add this method to auth_service.dart (just before the updatePresence method)
+
+  // This method returns a Future that completes when initial data is loaded
+  Future<bool> waitForInitialDataLoad() async {
+    try {
+      if (firebaseUser.value == null) {
+        return false;
+      }
+
+      // Wait for user model to be loaded
+      if (userModel.value == null) {
+        // Wait for user data to be fetched
+        await Future.delayed(Duration(milliseconds: 500));
+        if (userModel.value == null) {
+          return false;
+        }
+      }
+
+      // Signal that initial data is loaded
+      return true;
+    } catch (e) {
+      print('Error waiting for initial data: $e');
+      return false;
+    }
+  }
+
   Future<void> updatePresence(bool isOnline) async {
     try {
       final user = firebaseUser.value;
