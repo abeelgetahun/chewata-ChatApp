@@ -1,4 +1,3 @@
-
 import 'package:chewata/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -12,7 +11,7 @@ class AppLifecycleService extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    
+
     // Create a more reliable lifecycle observer
     final lifecycleObserver = LifecycleEventHandler(
       resumeCallBack: () {
@@ -26,13 +25,13 @@ class AppLifecycleService extends GetxService {
         isConnected.value = false;
       },
     );
-    
+
     WidgetsBinding.instance.addObserver(lifecycleObserver);
-    
+
     // Initial status setup based on current app state
     auth.updatePresence(true);
   }
-  
+
   @override
   void onClose() {
     // Ensure user is marked offline when service is closed

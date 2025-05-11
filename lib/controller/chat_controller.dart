@@ -253,37 +253,22 @@ class ChatController extends GetxController {
   final RxMap<String, bool> userOnlineStatus = <String, bool>{}.obs;
   final RxMap<String, DateTime?> userLastSeen = <String, DateTime?>{}.obs;
 
-  // Add this method to listen to real-time status changes
   void listenToUserStatus(String userId) {
     if (userId.isEmpty) return;
 
     // Don't create duplicate subscriptions
     if (_statusSubscriptions.containsKey(userId)) {
-      print('Already listening to status for user: $userId');
       return;
     }
-
-    print('Starting to listen to status for user: $userId');
 
     // Listen to changes in the user's status
     final subscription = _chatService.listenToUserOnlineStatus(userId).listen((
       userData,
     ) {
       if (userData != null) {
-        final bool wasOnline = userOnlineStatus[userId] ?? false;
-        final bool isNowOnline = userData.isOnline;
-
-        print(
-          'Status update for $userId: online=$isNowOnline, lastSeen=${userData.lastSeen}',
-        );
-
-        // Only update if there's an actual change to avoid UI flicker
-        if (wasOnline != isNowOnline ||
-            (userData.lastSeen != null &&
-                userLastSeen[userId] != userData.lastSeen)) {
-          userOnlineStatus[userId] = isNowOnline;
-          userLastSeen[userId] = userData.lastSeen;
-        }
+        // Update our maps with the properly filtered status from the service
+        userOnlineStatus[userId] = userData.isOnline;
+        userLastSeen[userId] = userData.lastSeen;
       }
     });
 
@@ -408,6 +393,63 @@ class ChatController extends GetxController {
   void markCurrentChatMessagesAsRead() {
     if (selectedChatId.value.isNotEmpty) {
       _chatService.markChatAsRead(selectedChatId.value);
+    }
+  }
+
+  // Use this in the UI to determine if we should show the online indicator
+  bool shouldShowOnlineIndicator(String userId) {
+    // Get the user's showOnlineStatus preference
+    final targetUserModel = chatUsers[userId];
+    if (targetUserModel == null) return false;
+
+    // Only show if both users have enabled status sharing
+    return targetUserModel.showOnlineStatus &&
+        (_authService.userModel.value?.showOnlineStatus ?? false) &&
+        (userOnlineStatus[userId] ?? false);
+  }
+
+  // Get appropriate last seen text based on privacy settings
+  String getLastSeenText(String userId) {
+    final targetUserModel = chatUsers[userId];
+    if (targetUserModel == null) return "Offline";
+
+    // If either user has disabled status sharing, just show "Offline"
+    if (!targetUserModel.showOnlineStatus ||
+        !(_authService.userModel.value?.showOnlineStatus ?? false)) {
+      return "Offline";
+    }
+
+    // User is online
+    if (userOnlineStatus[userId] == true) {
+      return "Online";
+    }
+
+    // User is offline but we can show last seen
+    final lastSeen = userLastSeen[userId];
+    if (lastSeen != null) {
+      // Format the lastSeen timestamp appropriately
+      return "Last seen ${_formatLastSeen(lastSeen)}";
+    }
+
+    return "Offline";
+  }
+
+  // Helper to format last seen time
+  String _formatLastSeen(DateTime lastSeen) {
+    final now = DateTime.now();
+    final difference = now.difference(lastSeen);
+
+    if (difference.inMinutes < 1) {
+      return "just now";
+    } else if (difference.inHours < 1) {
+      return "${difference.inMinutes} min ago";
+    } else if (difference.inDays < 1) {
+      return "${difference.inHours} hours ago";
+    } else if (difference.inDays < 7) {
+      return "${difference.inDays} days ago";
+    } else {
+      // Format as date for older timestamps
+      return "${lastSeen.day}/${lastSeen.month}/${lastSeen.year}";
     }
   }
 }

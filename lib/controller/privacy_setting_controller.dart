@@ -21,17 +21,26 @@ class PrivacySettingsController extends GetxController {
   void loadCurrentSettings() {
     final user = _authService.userModel.value;
     if (user != null) {
+      print(
+        'Loading settings - showOnlineStatus: ${user.showOnlineStatus}, enableNotifications: ${user.enableNotifications}',
+      );
       showOnlineStatus.value = user.showOnlineStatus;
       enableNotifications.value = user.enableNotifications;
+    } else {
+      print('User model is null when loading settings');
     }
   }
 
   Future<bool> updateOnlineStatusVisibility(bool show) async {
     isLoading.value = true;
     try {
+      print('Updating showOnlineStatus to: $show');
       final result = await _settingsService.updateOnlineStatusVisibility(show);
       if (result) {
         showOnlineStatus.value = show;
+        print('Successfully updated showOnlineStatus to: $show');
+      } else {
+        print('Failed to update showOnlineStatus');
       }
       return result;
     } catch (e) {

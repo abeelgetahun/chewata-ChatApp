@@ -1,11 +1,16 @@
 // lib/screen/account_screen.dart
 import 'package:chewata/controller/privacy_setting_controller.dart';
+import 'package:chewata/screen/account/about_app_screen.dart';
+import 'package:chewata/screen/account/help_center_screen.dart';
+import 'package:chewata/screen/account/terms_and_privacy_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:chewata/controller/account_controller.dart';
 import 'package:chewata/controller/theme_controller.dart';
 import 'package:chewata/services/auth_service.dart';
 import 'package:chewata/screen/account/personal_info_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({Key? key}) : super(key: key);
@@ -253,33 +258,50 @@ class AccountScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _buildOptionItem(context, 'Help Center', Icons.help_outline, () {
-          Get.snackbar(
-            'Coming Soon',
-            'This feature is under development',
-            snackPosition: SnackPosition.BOTTOM,
-          );
+          _showHelpCenterScreen(context, isDarkMode);
         }, isDarkMode),
         _buildOptionItem(context, 'About Chewata', Icons.info_outline, () {
-          Get.snackbar(
-            'Coming Soon',
-            'This feature is under development',
-            snackPosition: SnackPosition.BOTTOM,
-          );
+          _showAboutAppScreen(context, isDarkMode);
         }, isDarkMode),
         _buildOptionItem(
           context,
           'Terms & Privacy Policy',
           Icons.description_outlined,
           () {
-            Get.snackbar(
-              'Coming Soon',
-              'This feature is under development',
-              snackPosition: SnackPosition.BOTTOM,
-            );
+            _showTermsAndPrivacyScreen(context, isDarkMode);
           },
           isDarkMode,
         ),
       ],
+    );
+  }
+
+  // Help Center Screen
+  void _showHelpCenterScreen(BuildContext context, bool isDarkMode) {
+    Get.to(
+      () => HelpCenterScreen(),
+      transition: Transition.rightToLeftWithFade,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  // About App Screen
+  void _showAboutAppScreen(BuildContext context, bool isDarkMode) {
+    Get.to(
+      () => AboutAppScreen(),
+      transition: Transition.fadeIn,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  // Terms and Privacy Screen
+  void _showTermsAndPrivacyScreen(BuildContext context, bool isDarkMode) {
+    Get.to(
+      () => TermsAndPrivacyScreen(),
+      transition: Transition.zoom,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOut,
     );
   }
 
@@ -476,8 +498,12 @@ void _showPrivacyAndNotificationsDialog(BuildContext context, bool isDarkMode) {
   final PrivacySettingsController controller =
       Get.find<PrivacySettingsController>();
 
-  // Make sure we have the latest settings
+  // Force refresh the settings from the user model
   controller.loadCurrentSettings();
+
+  // Add debug logs to verify the values
+  print('Current showOnlineStatus: ${controller.showOnlineStatus.value}');
+  print('Current enableNotifications: ${controller.enableNotifications.value}');
 
   showGeneralDialog(
     context: context,
@@ -533,7 +559,7 @@ void _showPrivacyAndNotificationsDialog(BuildContext context, bool isDarkMode) {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Show others when you are online',
+                            'Show others when you are online (Note: hiding your status means you won\'t see others\' status either)',
                             style: TextStyle(
                               fontSize: 12,
                               color:

@@ -1,4 +1,4 @@
-// In user_model.dart, add a notification preference field
+// In user_model.dart, add a copyWith method
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
@@ -26,6 +26,34 @@ class UserModel {
     this.enableNotifications = true, // Default to notifications enabled
   });
 
+  // Add copyWith method
+  UserModel copyWith({
+    String? id,
+    String? fullName,
+    String? email,
+    DateTime? birthDate,
+    String? profilePicUrl,
+    DateTime? createdAt,
+    bool? isOnline,
+    DateTime? lastSeen,
+    bool? showOnlineStatus,
+    bool? enableNotifications,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      birthDate: birthDate ?? this.birthDate,
+      profilePicUrl: profilePicUrl ?? this.profilePicUrl,
+      createdAt: createdAt ?? this.createdAt,
+      isOnline: isOnline ?? this.isOnline,
+      lastSeen:
+          lastSeen, // Note: passing null explicitly replaces current value
+      showOnlineStatus: showOnlineStatus ?? this.showOnlineStatus,
+      enableNotifications: enableNotifications ?? this.enableNotifications,
+    );
+  }
+
   // Update toMap method to include new fields
   Map<String, dynamic> toMap() {
     return {
@@ -45,23 +73,21 @@ class UserModel {
   // Update fromMap to handle the new fields
   factory UserModel.fromMap(Map<String, dynamic> map) {
     DateTime? parseLastSeen(dynamic lastSeenValue) {
-      DateTime? parseLastSeen(dynamic lastSeenValue) {
-        if (lastSeenValue == null) return null;
+      if (lastSeenValue == null) return null;
 
-        if (lastSeenValue is Timestamp) {
-          return lastSeenValue.toDate();
-        } else if (lastSeenValue is DateTime) {
-          return lastSeenValue;
-        } else if (lastSeenValue is String) {
-          try {
-            return DateTime.parse(lastSeenValue);
-          } catch (e) {
-            print('Error parsing lastSeen string: $e');
-            return null;
-          }
+      if (lastSeenValue is Timestamp) {
+        return lastSeenValue.toDate();
+      } else if (lastSeenValue is DateTime) {
+        return lastSeenValue;
+      } else if (lastSeenValue is String) {
+        try {
+          return DateTime.parse(lastSeenValue);
+        } catch (e) {
+          print('Error parsing lastSeen string: $e');
+          return null;
         }
-        return null;
       }
+      return null;
     }
 
     return UserModel(

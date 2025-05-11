@@ -42,8 +42,6 @@ class ChatService extends GetxService {
     }
   }
 
-  // In chat_service.dart, add this enhanced method for status listening
-  // Add this to chat_service.dart
   Stream<UserModel?> listenToUserOnlineStatus(String userId) {
     return _usersCollection.doc(userId).snapshots().map((snapshot) {
       if (!snapshot.exists) return null;
@@ -52,23 +50,16 @@ class ChatService extends GetxService {
           snapshot.data() as Map<String, dynamic>,
         );
 
-        // If user has hidden their online status, we treat them as offline
+        // Get the current user's showOnlineStatus
+        final currentUserShowOnlineStatus =
+            _authService.userModel.value?.showOnlineStatus ?? true;
+
+        // If the target user hides their status, show them as offline with no last seen
         if (!user.showOnlineStatus) {
-          // Create a new instance with isOnline set to false
-          return UserModel(
-            id: user.id,
-            fullName: user.fullName,
-            email: user.email,
-            birthDate: user.birthDate,
-            profilePicUrl: user.profilePicUrl,
-            createdAt: user.createdAt,
-            isOnline: false,
-            lastSeen: user.lastSeen,
-            showOnlineStatus: false,
-            enableNotifications: user.enableNotifications,
-          );
+          return user.copyWith(isOnline: false, lastSeen: null);
         }
 
+        // Return actual status since both users allow sharing status
         return user;
       } catch (e) {
         print('Error parsing user data: $e');

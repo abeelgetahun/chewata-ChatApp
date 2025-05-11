@@ -6,15 +6,11 @@ import 'package:chewata/utils/device/device_utility.dart';
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
-
 class onBordingDotNavigation extends StatelessWidget {
-  const onBordingDotNavigation({
-    super.key,
-  });
+  const onBordingDotNavigation({super.key});
 
   @override
   Widget build(BuildContext context) {
-    
     final controller = OnBoardingController.instance;
     final dark = THelperFunction.isDarkMode(context);
     return Positioned(
@@ -27,9 +23,8 @@ class onBordingDotNavigation extends StatelessWidget {
         effect: ExpandingDotsEffect(
           dotWidth: 10.0,
           dotHeight: 6.0,
-          activeDotColor: dark ? TColor.light : TColor.dark
-         
-        )
+          activeDotColor: dark ? TColor.light : TColor.dark,
+        ),
       ),
     );
   }
