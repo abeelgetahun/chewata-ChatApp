@@ -13,10 +13,23 @@ import 'package:chewata/services/chat_service.dart';
 import 'package:chewata/services/setting_service.dart';
 import 'package:chewata/utils/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:get/get.dart';
 
-class App extends StatelessWidget {
+class App extends StatefulWidget {
   const App({super.key});
+
+  @override
+  State<App> createState() => _AppState();
+}
+
+class _AppState extends State<App> {
+  @override
+  void initState() {
+    super.initState();
+    FlutterNativeSplash.remove();
+    // Initialize Firebase and other services here if needed
+  }
 
   @override
   Widget build(BuildContext context) {

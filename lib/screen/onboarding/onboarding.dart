@@ -14,10 +14,16 @@ class OnBoardingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Preload the login background image
-    precacheImage(
-      const AssetImage("assets/images/auth_images/login_background.jpg"),
-      context,
-    );
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundImage =
+        isDark
+            ? const AssetImage("assets/images/auth_images/login_dark.jpg")
+            : const AssetImage(
+              "assets/images/auth_images/login_background.jpg",
+            );
+
+    // Preload the chosen background image
+    precacheImage(backgroundImage, context);
 
     final controller = Get.put(OnBoardingController());
 
