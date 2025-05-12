@@ -71,6 +71,13 @@ flutter_launcher_icons:
   image_path: "assets/icons/app_logo.png"
   min_sdk_android: 21 # android min sdk min:16, default 21
 
+flutter_native_splash:
+  color: "#ffffff" # background color
+  image: assets/icons/app_logo.png # your splash image
+  android: true
+  ios: true
+  fullscreen: true
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
