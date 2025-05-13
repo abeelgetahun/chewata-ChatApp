@@ -30,7 +30,8 @@ class HomeScreen extends StatelessWidget {
     if (!Get.isRegistered<NavigationController>()) {
       Get.put(NavigationController());
     }
-    final NavigationController navigationController = Get.find<NavigationController>();
+    final NavigationController navigationController =
+        Get.find<NavigationController>();
 
     // Ensure the default tab is Chewata
     navigationController.changeIndex(0);
@@ -54,9 +55,10 @@ class HomeScreen extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isDarkMode
-              ? [Colors.black, Colors.grey[900]!]
-              : [Colors.white, Colors.grey[200]!],
+          colors:
+              isDarkMode
+                  ? [Colors.black, Colors.grey[900]!]
+                  : [Colors.white, Colors.grey[200]!],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -86,9 +88,14 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(width: 12),
             IconButton(
               onPressed: () {
-                final ChatController chatController = Get.find<ChatController>();
-                chatController.searchedUser.value = null; // Clear previous search
-                Get.to(() => SearchScreen(), transition: Transition.rightToLeft);
+                final ChatController chatController =
+                    Get.find<ChatController>();
+                chatController.searchedUser.value =
+                    null; // Clear previous search
+                Get.to(
+                  () => SearchScreen(),
+                  transition: Transition.rightToLeft,
+                );
               },
               icon: _buildAppBarIcon('assets/icons/search.svg', isDarkMode),
             ),
@@ -123,30 +130,59 @@ class HomeScreen extends StatelessWidget {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-              child: Obx(() => GNav(
-                selectedIndex: navigationController.selectedIndex.value,
-                onTabChange: (index) {
-                  // Navigate to the selected page in the PageView
-                  pageController.jumpToPage(index);
-                },
-                rippleColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-                hoverColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
-                gap: 8,
-                activeColor: isDarkMode ? Colors.white : Colors.black,
-                iconSize: 24,
-                tabActiveBorder: isDarkMode ? Border.all(color: Colors.white, width: 1) : Border.all(color: Colors.black, width: 1),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                duration: const Duration(milliseconds: 400),
-                tabBackgroundColor: Colors.transparent,
-                color: isDarkMode ? Colors.black : Colors.white,
-                tabs: [
-                  _buildNavItem('chewata', 'assets/icons/home_chewata_nav.svg', isDarkMode),
-                  _buildNavItem('connect', 'assets/icons/home_connect_nav.svg', isDarkMode),
-                  _buildNavItem('fun', 'assets/icons/home_fun_nav.svg', isDarkMode),
-                  _buildNavItem('account', 'assets/icons/home_account_nav.svg', isDarkMode),
-                ],
-              )),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 8.0,
+              ),
+              child: Obx(
+                () => GNav(
+                  selectedIndex: navigationController.selectedIndex.value,
+                  onTabChange: (index) {
+                    // Navigate to the selected page in the PageView
+                    pageController.jumpToPage(index);
+                  },
+                  rippleColor:
+                      isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+                  hoverColor:
+                      isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
+                  gap: 8,
+                  activeColor: isDarkMode ? Colors.white : Colors.black,
+                  iconSize: 24,
+                  tabActiveBorder:
+                      isDarkMode
+                          ? Border.all(color: Colors.white, width: 1)
+                          : Border.all(color: Colors.black, width: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  duration: const Duration(milliseconds: 400),
+                  tabBackgroundColor: Colors.transparent,
+                  color: isDarkMode ? Colors.black : Colors.white,
+                  tabs: [
+                    _buildNavItem(
+                      'chewata',
+                      'assets/icons/home_chewata_nav.svg',
+                      isDarkMode,
+                    ),
+                    _buildNavItem(
+                      'connect',
+                      'assets/icons/home_connect_nav.svg',
+                      isDarkMode,
+                    ),
+                    _buildNavItem(
+                      'fun',
+                      'assets/icons/home_fun_nav.svg',
+                      isDarkMode,
+                    ),
+                    _buildNavItem(
+                      'account',
+                      'assets/icons/home_account_nav.svg',
+                      isDarkMode,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -154,7 +190,10 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _showThemeSelectionDialog(BuildContext context, ThemeController themeController) {
+  void _showThemeSelectionDialog(
+    BuildContext context,
+    ThemeController themeController,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -246,7 +285,10 @@ class HomeScreen extends StatelessWidget {
     return ListTile(
       title: Text(title),
       leading: Icon(icon),
-      trailing: isSelected ? Icon(Icons.check, color: Theme.of(context).primaryColor) : null,
+      trailing:
+          isSelected
+              ? Icon(Icons.check, color: Theme.of(context).primaryColor)
+              : null,
       onTap: () {
         onTap();
         Navigator.of(context).pop();
@@ -257,7 +299,8 @@ class HomeScreen extends StatelessWidget {
   GButton _buildNavItem(String text, String iconPath, bool isDarkMode) {
     return GButton(
       icon: Icons.home, // Replace with an appropriate icon
-      leading: CustomIcon( // Use leading for custom SVG icon
+      leading: CustomIcon(
+        // Use leading for custom SVG icon
         iconPath: iconPath,
         isActive: true,
         isDarkMode: isDarkMode,
@@ -275,25 +318,26 @@ class HomeScreen extends StatelessWidget {
       height: 24,
       width: 24,
       colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
-      placeholderBuilder: (BuildContext context) => Icon(
-        // Fallback icons based on which SVG failed to load
-        assetPath.contains('search')
-            ? Icons.search
-            : assetPath.contains('dark_mode')
+      placeholderBuilder:
+          (BuildContext context) => Icon(
+            // Fallback icons based on which SVG failed to loadd
+            assetPath.contains('search')
+                ? Icons.search
+                : assetPath.contains('dark_mode')
                 ? Icons.dark_mode
                 : assetPath.contains('logout')
-                    ? Icons.logout
-                    : Icons.error,
-        color: iconColor,
-        size: 24,
-      ),
+                ? Icons.logout
+                : Icons.error,
+            color: iconColor,
+            size: 24,
+          ),
     );
   }
 
   // Update the _buildHomeContent method in home_screen.dart
-Widget _buildHomeContent(AuthService authService) {
-  return const ChatListScreen();
-}
+  Widget _buildHomeContent(AuthService authService) {
+    return const ChatListScreen();
+  }
 }
 
 // Custom icon widget that handles SVG icons and adapts to theme
@@ -323,12 +367,16 @@ class CustomIcon extends StatelessWidget {
       iconPath,
       height: 24,
       width: 24,
-      colorFilter: ColorFilter.mode(color, BlendMode.srcIn), // Apply color filter
-      placeholderBuilder: (BuildContext context) => Icon(
-        Icons.error, // Fallback icon if SVG fails to load
-        color: color,
-        size: 24,
-      ),
+      colorFilter: ColorFilter.mode(
+        color,
+        BlendMode.srcIn,
+      ), // Apply color filter
+      placeholderBuilder:
+          (BuildContext context) => Icon(
+            Icons.error, // Fallback icon if SVG fails to load
+            color: color,
+            size: 24,
+          ),
     );
   }
 }
