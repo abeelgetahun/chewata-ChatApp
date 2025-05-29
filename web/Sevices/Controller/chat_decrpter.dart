@@ -11,6 +11,31 @@ class ChatDecrypter {
     _iv = encrypt.IV.fromUtf8('1234567890123456'); // 16 bytes IV
   }
 
+  // Decrypt an encrypted message
+  String decryptMessage(String encryptedText) {
+    try {
+      if (encryptedText.isEmpty) throw Exception("Empty encrypted text");
+      final decrypted = _encrypter.decrypt(
+        encrypt.Encrypted.fromBase64(encryptedText),
+        iv: _iv,
+      );
+      return decrypted;
+    } catch (e) {
+      print("Decryption error: $e");
+      return "Decryption failed: Invalid or corrupted data";
+    }
+  }
+
+  // Validate encrypted message format
+  bool isValidEncryptedFormat(String encryptedText) {
+    try {
+      encrypt.Encrypted.fromBase64(encryptedText);
+      return true;
+    } catch (e) {
+      print("Invalid encrypted format: $e");
+      return false;
+    }
+  }
 
   // Batch decrypt multiple messages
   List<String> decryptBatch(List<String> encryptedMessages) {
