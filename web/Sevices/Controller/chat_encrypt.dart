@@ -17,6 +17,19 @@ class ChatEncrypt {
     return base64Encode(encrypted.bytes);
   }
 
+  // Decrypt a message
+  String decryptMessage(String encryptedText) {
+    try {
+      final decrypted = _encrypter.decrypt(
+        encrypt.Encrypted.fromBase64(encryptedText),
+        iv: _iv,
+      );
+      return decrypted;
+    } catch (e) {
+      print("Decryption error: $e");
+      return "Decryption failed";
+    }
+  }
 
   // Generate a random encryption key
   String generateKey() {
