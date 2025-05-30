@@ -92,4 +92,24 @@ class ChatSync {
     syncChatHistory();
     syncDeletedHistory();
   }
+  @override
+  Future<void> syncChatData() async {
+    try {
+      await _sync.syncChatHistory();
+      await _sync.syncDeletedHistory();
+      print("Chat data synced successfully");
+    } catch (e) {
+      print("Error syncing chat data: $e");
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> sendMessage(String id, String message, String sender, String receiver) => throw UnimplementedError();
+  @override
+  Future<List<ChatHistory>> receiveMessages(String userId) => throw UnimplementedError();
+  @override
+  Future<void> deleteMessage(String messageId, String deletedBy) => throw UnimplementedError();
+  @override
+  Future<void> updateUserStatus(String userId, bool isOnline) => throw UnimplementedError();
 }
