@@ -17,6 +17,7 @@ class _LoginFormState extends State<LoginForm> {
   final AuthController _authController = Get.put(AuthController());
   final AuthService _authService = Get.find<AuthService>();
   bool _isPasswordVisible = false;
+  //code part
 
   @override
   Widget build(BuildContext context) {
