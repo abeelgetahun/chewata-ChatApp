@@ -1,12 +1,3 @@
-// This is imported file
-import 'package:flutter/material.dart';
-import 'package:chewata/screen/auth/login_form.dart';
-import 'package:chewata/screen/auth/signup_form.dart';
-import 'package:chewata/screen/auth/widgets/auth_background.dart';
-import 'package:chewata/screen/auth/widgets/auth_box.dart';
-import 'package:chewata/controller/auth_controller.dart';
-import 'package:get/get.dart';
-
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
 
@@ -27,7 +18,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
 
     setState(() {
-      _showLogin = !_showLogin;
+      _showLogin = !_showLogin; // Toggle the view between login and signup
     });
   }
 
