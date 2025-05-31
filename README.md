@@ -1,18 +1,31 @@
-# chewata
+# Chewata
 
-A new Flutter project.
+Chewata is a new **Flutter project** designed for seamless development and cross-platform compatibility.
 
-## Getting Started
+## 🚀 Getting Started
 
-This project is a starting point for a Flutter application.
+This project serves as a foundation for your Flutter application, providing essential resources to help you begin.
 
-A few resources to get you started if this is your first Flutter project:
+### 📚 Helpful Resources:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- [Lab: Write Your First Flutter App](https://docs.flutter.dev/get-started/codelab)
+- [Cookbook: Useful Flutter Samples](https://docs.flutter.dev/cookbook)
+- [Flutter Documentation](https://docs.flutter.dev/) – Tutorials, samples, mobile development guidance, and full API reference.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🎨 Interactive Figma Design Preview
 
-<iframe style="border: 1px solid rgba(0, 0, 0, 0.1);" width="800" height="450" src="https://www.embed.figma.com/design/QigJyEkwaFrPGx7gaFzaaC/Chaweta?node-id=0-1&embed-host=share" allowfullscreen></iframe>
+Click below to view the Figma design:
+
+[![Figma Design](https://img.shields.io/badge/View%20on%20Figma-Design-blue)](https://www.figma.com/file/YOUR-FIGMA-FILE-ID)
+
+Alternatively, if embedding on a website, use:
+
+```html
+<iframe
+  style="border: 1px solid rgba(0, 0, 0, 0.1);"
+  width="800"
+  height="450"
+  src="https://www.figma.com/embed?file=YOUR-FIGMA-FILE-ID"
+  allowfullscreen
+></iframe>
+```
