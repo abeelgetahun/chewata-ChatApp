@@ -1,4 +1,4 @@
-// lib/screen/auth/login_form.dart
+// lib/screen/auth/login_form.dart code
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:chewata/controller/auth_controller.dart';
@@ -39,7 +39,7 @@ class _LoginFormState extends State<LoginForm> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            
+
             // Email input field
             _buildInputField(
               controller: _authController.loginEmailController,
@@ -51,14 +51,16 @@ class _LoginFormState extends State<LoginForm> {
                 if (value == null || value.isEmpty) {
                   return 'Please enter your email';
                 }
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                if (!RegExp(
+                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                ).hasMatch(value)) {
                   return 'Please enter a valid email address';
                 }
                 return null;
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Password input field
             _buildInputField(
               controller: _authController.loginPasswordController,
@@ -83,43 +85,48 @@ class _LoginFormState extends State<LoginForm> {
                 },
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Login button
-            Obx(() => _authService.isLoading.value
-                ? const CircularProgressIndicator(color: Colors.deepPurple)
-                : ElevatedButton(
-                    onPressed: _authController.login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+            Obx(
+              () =>
+                  _authService.isLoading.value
+                      ? const CircularProgressIndicator(
+                        color: Colors.deepPurple,
+                      )
+                      : ElevatedButton(
+                        onPressed: _authController.login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepPurple,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          elevation: 5,
+                        ),
+                        child: const Text(
+                          "Login",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                      elevation: 5,
-                    ),
-                    child: const Text(
-                      "Login",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  )),
+            ),
             const SizedBox(height: 16),
-            
+
             // Sign Up prompt
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
                   "Don't have an account? ",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 14),
                 ),
                 GestureDetector(
                   onTap: widget.onSwitchToSignUp,
