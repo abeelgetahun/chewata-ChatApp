@@ -1,4 +1,4 @@
-// lib/screen/auth/login_form.dart code
+// lib/screen/auth/login_form.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:chewata/controller/auth_controller.dart';
