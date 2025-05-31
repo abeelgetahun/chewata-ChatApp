@@ -13,7 +13,7 @@ class OnBoardingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Preload the login background image
+    // Preload the login background image for smoother transitions
     precacheImage(
       const AssetImage("assets/images/auth_images/login_background.jpg"),
       context,
@@ -24,7 +24,7 @@ class OnBoardingScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Horizontal scrollable
+          // Horizontal scrollable pages for onboarding
           PageView(
             controller: controller.pageController,
             onPageChanged: controller.updatePageIndicator,
@@ -50,10 +50,10 @@ class OnBoardingScreen extends StatelessWidget {
           // Skip button with better visibility
           const onBoardingSkip(),
 
-          // Smooth page indicator
+          // Smooth page indicator for user navigation
           onBordingDotNavigation(),
 
-          // Floating button
+          // Floating button for progressing to the next page
           onBoardingNextButton(),
         ],
       ),
