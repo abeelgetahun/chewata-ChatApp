@@ -47,7 +47,7 @@ class _SignupFormState extends State<SignupForm>
     if (password.isNotEmpty && !_isPasswordTouched) {
       setState(() => _isPasswordTouched = true);
     }
-
+    // Animation controller for password validation textgit
     final wasValid = _isPasswordValid;
     final isNowValid = password.length >= 6;
 
