@@ -13,14 +13,15 @@ class SignupForm extends StatefulWidget {
   State<SignupForm> createState() => _SignupFormState();
 }
 
-class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateMixin {
+class _SignupFormState extends State<SignupForm>
+    with SingleTickerProviderStateMixin {
   final AuthController _authController = Get.find<AuthController>();
   final AuthService _authService = Get.find<AuthService>();
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _isPasswordTouched = false;
   bool _isPasswordValid = false;
-  
+
   // Animation controller for password validation text
   late AnimationController _animationController;
   late Animation<double> _opacityAnimation;
@@ -33,29 +34,26 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
       duration: const Duration(milliseconds: 800),
     );
     _opacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOut,
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
-    
+
     // Listen to password changes to update validation state
     _authController.signupPasswordController.addListener(_validatePassword);
   }
-  
+
   void _validatePassword() {
     final password = _authController.signupPasswordController.text;
-    
+
     if (password.isNotEmpty && !_isPasswordTouched) {
       setState(() => _isPasswordTouched = true);
     }
-    
+
     final wasValid = _isPasswordValid;
     final isNowValid = password.length >= 6;
-    
+
     if (wasValid != isNowValid) {
       setState(() => _isPasswordValid = isNowValid);
-      
+
       if (isNowValid) {
         // If now valid, start fade out animation
         _animationController.forward();
@@ -121,7 +119,9 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
                 if (value == null || value.isEmpty) {
                   return 'Please enter your email';
                 }
-                if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(value)) {
+                if (!RegExp(
+                  r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                ).hasMatch(value)) {
                   return 'Please enter a valid email address';
                 }
                 return null;
@@ -160,7 +160,9 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
                       prefixIcon: const Icon(Icons.lock, color: Colors.white),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                           color: Colors.white70,
                         ),
                         onPressed: () {
@@ -179,7 +181,10 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
                         borderSide: BorderSide(color: Colors.redAccent),
                       ),
                       focusedErrorBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.redAccent, width: 2),
+                        borderSide: BorderSide(
+                          color: Colors.redAccent,
+                          width: 2,
+                        ),
                       ),
                       errorStyle: const TextStyle(color: Colors.redAccent),
                     ),
@@ -193,7 +198,10 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
                           'At least 6 characters',
                           style: TextStyle(
                             fontSize: 12,
-                            color: _isPasswordValid ? Colors.green : Colors.redAccent,
+                            color:
+                                _isPasswordValid
+                                    ? Colors.green
+                                    : Colors.redAccent,
                           ),
                         ),
                       ),
@@ -219,7 +227,9 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
               },
               suffixIcon: IconButton(
                 icon: Icon(
-                  _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                  _isConfirmPasswordVisible
+                      ? Icons.visibility
+                      : Icons.visibility_off,
                   color: Colors.white70,
                 ),
                 onPressed: () {
@@ -233,27 +243,35 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
             const SizedBox(height: 24),
 
             // Sign Up button
-            Obx(() => _authService.isLoading.value
-                ? const CircularProgressIndicator(color: Colors.deepPurple)
-                : ElevatedButton(
-                    onPressed: _authController.signup,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+            Obx(
+              () =>
+                  _authService.isLoading.value
+                      ? const CircularProgressIndicator(
+                        color: Colors.deepPurple,
+                      )
+                      : ElevatedButton(
+                        onPressed: _authController.signup,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepPurple,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          elevation: 5,
+                        ),
+                        child: const Text(
+                          "Sign Up",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                      elevation: 5,
-                    ),
-                    child: const Text(
-                      "Sign Up",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  )),
+            ),
 
             const SizedBox(height: 16),
 
@@ -263,10 +281,7 @@ class _SignupFormState extends State<SignupForm> with SingleTickerProviderStateM
               children: [
                 const Text(
                   "Already have an account? ",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 14),
                 ),
                 GestureDetector(
                   onTap: widget.onSwitchToLogin,
