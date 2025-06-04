@@ -40,8 +40,14 @@ Here is a short video that demonstrates the key features and functionality of th
 
 *(Note: To add your video, you can upload it to your repository or a video hosting service like YouTube and embed the link or file here.)*
 
-[Watch demo video](chat app -demo.mp4)
+## 🎥 Project Demo
 
+<p align="center">
+  <video width="80%" controls>
+    <source src="chewata-demo.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+</p>
 
 -----
 
