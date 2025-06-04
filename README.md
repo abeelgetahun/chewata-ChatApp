@@ -42,11 +42,9 @@ Here is a short video that demonstrates the key features and functionality of th
 
 ## 🎥 Project Demo
 
-<p align="center">
-  <video width="80%" controls>
-    <source src="chewata-demo.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
+https://github.com/user-attachments/assets/576d5ef8-d1ce-4ef6-a912-04ee892a8adb
+
+
 </p>
 
 -----
