@@ -1,97 +1,165 @@
-# 📱 Flutter Chat App
+# Chewata - A Feature-Rich Chat Application
+
+[](https://flutter.dev/)
+[](https://firebase.google.com/)
+[](https://www.figma.com/proto/QigJyEkwaFrPGx7gaFzaaC/Chaweta?content-scaling=fixed&kind=proto&node-id=3-8&page-id=0%3A1&scaling=scale-down&starting-point-node-id=37%3A2&t=6YQFvyT60jfhppYX-1)
+[](https://opensource.org/licenses/MIT)
+
+Welcome to the official repository for Chewata, a modern, cross-platform chat application built with Flutter and Firebase. This document provides a comprehensive overview of the project, including its structure, features, and instructions for setup and contribution.
+
+-----
+
+## 📜 Table of Contents
+
+  * [About The Project](https://www.google.com/search?q=%23-about-the-project)
+  * [🎥 Project Demo](https://www.google.com/search?q=%23-project-demo)
+  * [✨ Key Features](https://www.google.com/search?q=%23-key-features)
+  * [📂 Project Structure](https://www.google.com/search?q=%23-project-structure)
+  * [🚀 Getting Started](https://www.google.com/search?q=%23-getting-started)
+  * [🛠️ Usage](https://www.google.com/search?q=%23%EF%B8%8F-usage)
+  * [👥 Our Team](https://www.google.com/search?q=%23-our-team)
+  * [🤝 Contributing](https://www.google.com/search?q=%23-contributing)
+  * [📄 License](https://www.google.com/search?q=%23-license)
+  * [📞 Contact](https://www.google.com/search?q=%23-contact)
+
+-----
+
+## 📖 About The Project
+
+Chewata is a real-time chat application designed to provide a seamless and engaging user experience. The name "Chewata" means "play" or "chat" in Amharic, reflecting the application's goal of making communication fun and effortless. The application leverages the power of Flutter for a consistent UI across multiple platforms and Firebase for robust backend services, including authentication and real-time data synchronization.
+
+The UI/UX for this project was designed in Figma and you can view the prototype here:
+
+  * [**Figma Prototype Link**](https://www.figma.com/proto/QigJyEkwaFrPGx7gaFzaaC/Chaweta?content-scaling=fixed&kind=proto&node-id=3-8&page-id=0%3A1&scaling=scale-down&starting-point-node-id=37%3A2&t=6YQFvyT60jfhppYX-1)
+
+-----
+
+## 🎥 Project Demo
+
+Here is a short video that demonstrates the key features and functionality of the Chewata application.
+
+*(Note: To add your video, you can upload it to your repository or a video hosting service like YouTube and embed the link or file here.)*
+
+[Watch demo video](chat app -demo.mp4)
 
 
-<<<<<<< main
-An end-to-end real-time chat application built with Flutter. This app includes full authentication features like **Sign Up**, **Sign In**, and **Sign Out**, along with **real-time messaging**, **user status updates**, and a clean UI powered by Flutter.
-=======
-A new Flutter project.
-##Documentation
-for detail documentation and project overview, visit
-**[Chewat Documentation on Deepwiki**]https://deepwiki.com/biniam0/Chewata
->>>>>>> master
+-----
 
-An end-to-end real-time chat application built with Flutter. This app includes full authentication features like **Sign Up**, **Sign In**, and **Sign Out**, along with **real-time messaging**, **user status updates**, and a clean UI powered by Flutter.
+## ✨ Key Features
 
----
+  * **User Authentication:** Secure user registration and login functionality using Firebase Authentication.
+  * **Real-time Chat:** Instant messaging with real-time updates powered by Firebase Firestore.
+  * **Group Chat:** Functionality for users to engage in group conversations.
+  * **User Profiles:** A dedicated screen for users to manage their account information.
+  * **Onboarding Experience:** A user-friendly onboarding flow to introduce new users to the application's features.
+  * **Customizable Theming:** A well-organized theme and styling system for a consistent and appealing user interface.
+  * **Cross-Platform Compatibility:** A single codebase for Android, iOS, Web, Windows, macOS, and Linux.
 
-## 🚀 Features
+-----
 
-### 🔐 User Authentication (Email & Password)
-- Sign Up  
-- Sign In  
-- Sign Out  
+## 📂 Project Structure
 
-### 💬 Real-Time Chat
-- Send & receive messages instantly  
-- User presence/status updates (online/offline)
+The project is organized into a clean and scalable directory structure to facilitate ease of development and maintenance.
 
-### 🧑‍🤝‍🧑 Contact List
-- View all registered users  
-- Start 1-on-1 chats  
-
-### 📲 Responsive UI
-- Smooth experience on both Android and iOS  
-
----
-
-## 🛠️ Tech Stack
-
-- **Frontend:** Flutter (Dart)  
-- **Backend:** Firebase (Authentication, Firestore, Realtime Database or Cloud Functions)  
-- **State Management:** Provider / Riverpod / Bloc *(choose based on your implementation)*  
-- **Push Notifications:** Firebase Cloud Messaging *(optional)*  
-
----
-
-## 📦 Getting Started
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/your-username/flutter-chat-app.git
-cd flutter-chat-app
+```
+abeelgetahun-chewata-chatapp/
+├── android/            # Android specific files
+├── assets/             # Images, fonts, and other static assets
+├── ios/                # iOS specific files
+├── lib/                # Main application source code
+├── linux/              # Linux specific files
+├── macos/              # macOS specific files
+├── test/               # Unit and widget tests
+├── web/                # Web specific files
+├── windows/            # Windows specific files
+└── pubspec.yaml        # Project dependencies and configuration
 ```
 
-### 2. Install dependencies
+-----
 
-```bash
-flutter pub get
-```
+## 🚀 Getting Started
 
-### 3. Set up Firebase
+To get a local copy up and running, follow these simple steps.
 
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Create a new project
-3. Add Android/iOS app to the project
-4. Download `google-services.json` *(for Android)* or `GoogleService-Info.plist` *(for iOS)* and place them in the appropriate directories
-5. Enable **Email/Password** authentication
-6. Set up **Cloud Firestore** for real-time messaging
+### Prerequisites
 
-### 4. Run the app
+Make sure you have the following installed on your local development machine:
 
-```bash
+  * [Flutter SDK](https://flutter.dev/docs/get-started/install)
+  * A code editor such as [VS Code](https://code.visualstudio.com/) or [Android Studio](https://developer.android.com/studio)
+
+### Installation
+
+1.  **Clone the repository:**
+    ```sh
+    git clone https://github.com/abeelgetahun/chewata-chatapp.git
+    ```
+2.  **Navigate to the project directory:**
+    ```sh
+    cd abeelgetahun-chewata-chatapp
+    ```
+3.  **Install dependencies:**
+    ```sh
+    flutter pub get
+    ```
+
+-----
+
+## 🛠️ Usage
+
+To run the application on your connected device or emulator, use the following command:
+
+```sh
 flutter run
 ```
 
----
+### Firebase Configuration
 
-## 📸 Screenshots
+This project is integrated with Firebase. To connect your own Firebase project, you will need to:
 
-| Sign In | Chat Screen | Contact List |
-|--------|-------------|--------------|
-| ![Sign In](screenshots/signin.png) | ![Chat](screenshots/chat.png) | ![Contacts](screenshots/contacts.png) |
+1.  Create a new project on the [Firebase Console](https://console.firebase.google.com/).
+2.  Configure your project for Android, iOS, and Web.
+3.  Download the `google-services.json` file for Android and the `GoogleService-Info.plist` for iOS and place them in the appropriate directories.
+4.  The `lib/firebase_options.dart` file should be updated with your Firebase project's configuration.
 
----
+-----
 
-## ✅ TODOs
+## 👥 Our Team
 
-- [ ] Group chats  
-- [ ] Push notifications  
-- [ ] Message read receipts  
-- [ ] User profile customization  
+This project was brought to life by a dedicated team of students. Each member played a crucial role in the development process:
 
----
+  * **Yasin Shalo** - Figma Design 🎨
+  * **Abel Getahun** - Coordinator & Integration 🔗
+  * **Abreham Kifle** - Frontend Development 💻
+  * **Jaleta Kebede** - Business Logic 🧠
+  * **Liben Adugna** - QA | Tester 🧪
+  * **Akililu Desalegn** - Frontend Development 🎨
+  * **Meklit Abeje** - Database & Documentation 📝
+
+-----
+
+## 🤝 Contributing
+
+While the core team is listed above, contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+To contribute:
+
+1.  Fork the Project
+2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
+
+-----
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+Distributed under the MIT License. See `LICENSE` for more information.
+
+-----
+
+## 📞 Contact us
+
+  - [Chewata-chat(mailto:abelgetahun66@gmail.com)
+
+Project Link: [https://github.com/abeelgetahun/chewata-chatapp](https://www.google.com/search?q=https://github.com/abeelgetahun/chewata-chatapp)
