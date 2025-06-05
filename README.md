@@ -132,13 +132,13 @@ This project is integrated with Firebase. To connect your own Firebase project, 
 
 This project was brought to life by a dedicated team of students. Each member played a crucial role in the development process:
 
-  * **Yasin Shalo    UGR/31366/15** - Figma Design 🎨
-  * **Abel Getahun   UGR/30057/15** - Coordinator & Integration 🔗
-  * **Abreham Kifle    UGR/30101/15** - Frontend Development 💻
-  * **Jaleta Kebede   UGR/30722/15** - Business Logic 🧠
-  * **Liben Adugna   UGR/30828/15** - QA | Tester 🧪
-  * **Akililu Desalegn   UGR/30121/15** - Frontend Development 🎨
-  * **Meklit Abeje   UGR/30881/15** - Database & Documentation 📝
+  * **Yasin Shalo    UGR/31366/15       @Yasin5949 (figma designer)** - Figma Design 🎨
+  * **Abel Getahun   UGR/30057/15       @abeelgetahun** - Coordinator & Integration 🔗
+  * **Abreham Kifle    UGR/30101/15     @abrhot** - Frontend Development 💻
+  * **Jaleta Kebede   UGR/30722/15      @biniam0** - Business Logic 🧠
+  * **Liben Adugna   UGR/30828/15       @Lib1221** - QA | Tester 🧪
+  * **Akililu Desalegn   UGR/30121/15   @ake0507** - Frontend Development 🎨
+  * **Meklit Abeje   UGR/30881/15       @Meklit542** - Database & Documentation 📝
 
 -----
 
