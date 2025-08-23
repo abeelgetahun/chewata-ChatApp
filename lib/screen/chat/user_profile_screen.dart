@@ -1,4 +1,6 @@
 import 'package:chewata/models/user_model.dart';
+import 'package:get/get.dart';
+import 'package:chewata/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -59,7 +61,33 @@ class UserProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 28),
           _tile('Email', user.email, Icons.email_outlined),
-          _tile('Status', user.isOnline ? 'Online' : 'Offline', Icons.circle),
+          // Respect privacy: if user hides status or viewer hides their own,
+          // show 'Offline'. We don't have direct access to viewer here, so we
+          // assume AuthService via Get (optional), else fallback to target only.
+          Builder(
+            builder: (context) {
+              try {
+                final auth = Get.find<AuthService>();
+                final viewerAllows =
+                    auth.userModel.value?.showOnlineStatus ?? true;
+                final targetAllows = user.showOnlineStatus;
+                final visible = viewerAllows && targetAllows && user.isOnline;
+                return _tile(
+                  'Status',
+                  visible ? 'Online' : 'Offline',
+                  Icons.circle,
+                );
+              } catch (_) {
+                // If dependencies not available here, fallback to target privacy only
+                final visible = user.showOnlineStatus && user.isOnline;
+                return _tile(
+                  'Status',
+                  visible ? 'Online' : 'Offline',
+                  Icons.circle,
+                );
+              }
+            },
+          ),
           _tile('Age', _calcAge(user.birthDate), Icons.cake_outlined),
           _tile(
             'Joined',

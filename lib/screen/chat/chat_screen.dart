@@ -112,11 +112,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     if (otherUserId.isNotEmpty)
                       Obx(() {
-                        final isOnline =
-                            _chatController.userOnlineStatus[otherUserId] ??
-                            false;
-                        final lastSeen =
-                            _chatController.userLastSeen[otherUserId];
+                        final isOnline = _chatController
+                            .shouldShowOnlineIndicator(otherUserId);
+                        final statusText = _chatController.getLastSeenText(
+                          otherUserId,
+                        );
 
                         return Row(
                           children: [
@@ -130,11 +130,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             ),
                             SizedBox(width: 4),
                             Text(
-                              isOnline
-                                  ? 'Online'
-                                  : lastSeen != null
-                                  ? formatLastSeen(lastSeen)
-                                  : 'Offline',
+                              statusText,
                               style: GoogleFonts.ubuntu(
                                 fontSize: 12,
                                 color:
