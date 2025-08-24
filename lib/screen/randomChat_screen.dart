@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:chewata/models/user_model.dart';
 import 'package:chewata/models/message_model.dart';
 import 'package:chewata/services/auth_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 class RandomChatScreen extends StatefulWidget {
@@ -187,7 +188,7 @@ final currentUserId = _authService.firebaseUser.value?.uid;
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Random Chat'),
+              Text('Random Chat', style: GoogleFonts.ubuntu(),),
             Text(
               'with ${widget.partner.fullName}',
               style: const TextStyle(

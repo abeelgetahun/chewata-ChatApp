@@ -7,6 +7,8 @@ import 'package:chewata/services/chat_service.dart';
 import 'package:chewata/models/user_model.dart';
 import 'dart:math';
 
+import 'package:google_fonts/google_fonts.dart';
+
 class ConnectController extends GetxController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final AuthService _authService = Get.find<AuthService>();
@@ -14,7 +16,7 @@ class ConnectController extends GetxController {
   Rx<bool> isSearching = false.obs;
   Rx<String?> currentRandomChatId = Rx<String?>(null);
   Rx<UserModel?> randomChatPartner = Rx<UserModel?>(null);
-  Rx<int> searchDuration = 0.obs; // 0 = 1 min, 1 = 3 min, 2 = 5 min
+  // Random chat now always searches within the last 3 minutes (no user selection)
 
   // For UI feedback
   Rx<String> statusMessage = "Ready to connect".obs;
@@ -102,23 +104,9 @@ class ConnectController extends GetxController {
 
       final currentUser = UserModel.fromMap(currentUserDoc.data()!);
 
-      // Define time threshold based on selected duration
+      // Define time threshold: fixed at 3 minutes
       final now = DateTime.now();
-      Duration timeThreshold;
-
-      switch (searchDuration.value) {
-        case 0:
-          timeThreshold = const Duration(minutes: 1);
-          break;
-        case 1:
-          timeThreshold = const Duration(minutes: 3);
-          break;
-        case 2:
-          timeThreshold = const Duration(minutes: 5);
-          break;
-        default:
-          timeThreshold = const Duration(minutes: 1);
-      }
+      const Duration timeThreshold = Duration(minutes: 3);
 
       DateTime thresholdTime = now.subtract(timeThreshold);
 
@@ -177,7 +165,7 @@ class ConnectController extends GetxController {
       }
 
       if (potentialMatches.isEmpty) {
-        statusMessage.value = "No users available right now. Try again later.";
+        statusMessage.value = "No user found";
         return;
       }
 
@@ -224,7 +212,8 @@ class ConnectController extends GetxController {
       statusMessage.value = "Connected with ${selectedUser.fullName}";
     } catch (e) {
       print('Error starting random chat: $e');
-      statusMessage.value = "Error connecting. Please try again.";
+      // For unexpected errors, show a neutral, non-alarming message
+      statusMessage.value = "No user found";
     } finally {
       isSearching.value = false;
       isLoading.value = false;
@@ -320,7 +309,7 @@ class ConnectScreen extends StatelessWidget {
               // Title
               Text(
                 'Random Connections',
-                style: TextStyle(
+                style: GoogleFonts.ubuntu(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: isDarkMode ? Colors.white : Colors.black,
@@ -332,7 +321,7 @@ class ConnectScreen extends StatelessWidget {
               Text(
                 'Connect with random users and chat anonymously. Meet new people and make new friends!',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: GoogleFonts.ubuntu(
                   fontSize: 16,
                   color: isDarkMode ? Colors.white70 : Colors.black87,
                 ),
@@ -344,7 +333,7 @@ class ConnectScreen extends StatelessWidget {
                 () => Text(
                   connectController.statusMessage.value,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: GoogleFonts.ubuntu(
                     fontSize: 14,
                     fontStyle: FontStyle.italic,
                     color: isDarkMode ? Colors.white70 : Colors.black54,
@@ -353,7 +342,7 @@ class ConnectScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // Active chat indicator or duration selection
+              // Active chat indicator or info text
               Obx(() {
                 if (connectController.currentRandomChatId.value != null) {
                   // Show active chat indicator
@@ -374,9 +363,9 @@ class ConnectScreen extends StatelessWidget {
                               color: Theme.of(context).primaryColor,
                             ),
                             const SizedBox(width: 8),
-                            const Text(
+                              Text(
                               'Active Random Chat',
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                              style: GoogleFonts.ubuntu(fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -405,38 +394,13 @@ class ConnectScreen extends StatelessWidget {
                     ],
                   );
                 } else {
-                  // Show search duration selection
+                  // Show fixed matching window info
                   return Column(
-                    children: [
-                      const Text(
-                        'Search for users active within:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildDurationOption(
-                            connectController,
-                            0,
-                            '1 min',
-                            context,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildDurationOption(
-                            connectController,
-                            1,
-                            '3 min',
-                            context,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildDurationOption(
-                            connectController,
-                            2,
-                            '5 min',
-                            context,
-                          ),
-                        ],
+                    children:   [
+                      Text(
+                        'We match you with users active in the last 3 minutes, prioritizing similar ages.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.ubuntu(fontStyle: FontStyle.italic),
                       ),
                     ],
                   );
@@ -489,43 +453,5 @@ class ConnectScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDurationOption(
-    ConnectController controller,
-    int durationIndex,
-    String label,
-    BuildContext context,
-  ) {
-    return Obx(() {
-      final isSelected = controller.searchDuration.value == durationIndex;
-      return InkWell(
-        onTap: () => controller.searchDuration.value = durationIndex,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color:
-                isSelected
-                    ? Theme.of(context).primaryColor
-                    : Colors.transparent,
-            border: Border.all(
-              color:
-                  isSelected
-                      ? Theme.of(context).primaryColor
-                      : Theme.of(context).dividerColor,
-            ),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color:
-                  isSelected
-                      ? Colors.white
-                      : Theme.of(context).textTheme.bodyLarge?.color,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ),
-      );
-    });
-  }
+  // Duration selection UI removed – matching window is fixed at 3 minutes
 }
