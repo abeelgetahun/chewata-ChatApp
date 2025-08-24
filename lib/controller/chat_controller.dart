@@ -20,6 +20,8 @@ class ChatController extends GetxController {
   final RxBool isSearching = false.obs;
   final RxBool isLoadingMessages = false.obs;
   final Rx<UserModel?> searchedUser = Rx<UserModel?>(null);
+  final RxList<UserModel> searchResults = <UserModel>[].obs;
+  Timer? _searchDebounce;
 
   final RxBool isInitialLoading = true.obs;
   final RxInt chatBatchSize = 10.obs;
@@ -56,7 +58,29 @@ class ChatController extends GetxController {
     isInitialLoading.value = true;
 
     _chatService.getUserChats().listen((chats) {
-      _allChats = chats;
+      // Deduplicate chats by participant set to avoid duplicate entries
+      final Map<String, ChatModel> byPair = {};
+      for (final c in chats) {
+        final parts = List<String>.from(c.participants)..sort();
+        final key = parts.join('_');
+        // Keep the chat with the latest message time if duplicates exist
+        if (!byPair.containsKey(key)) {
+          byPair[key] = c;
+        } else {
+          final existing = byPair[key]!;
+          final existingTime = existing.lastMessageTime ?? existing.createdAt;
+          final newTime = c.lastMessageTime ?? c.createdAt;
+          if (newTime.isAfter(existingTime)) {
+            byPair[key] = c;
+          }
+        }
+      }
+      _allChats =
+          byPair.values.toList()..sort(
+            (a, b) => (b.lastMessageTime ?? b.createdAt).compareTo(
+              a.lastMessageTime ?? a.createdAt,
+            ),
+          );
 
       // Reset pagination state
       currentChatBatchIndex.value = 0;
@@ -165,6 +189,34 @@ class ChatController extends GetxController {
     }
   }
 
+  // New: Debounced, as-you-type search by email or full name (prefix)
+  void onSearchTextChanged(String value) {
+    // Reset old single-user result path
+    searchedUser.value = null;
+
+    final query = value.trim();
+    if (query.isEmpty) {
+      searchResults.clear();
+      isSearching.value = false;
+      return;
+    }
+
+    _searchDebounce?.cancel();
+    // Debounce to reduce Firestore queries while typing fast
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () async {
+      isSearching.value = true;
+      try {
+        final results = await _chatService.searchUsers(query: query);
+        // Exclude self and duplicates handled in service; just set results
+        searchResults.assignAll(results);
+      } catch (e) {
+        Get.snackbar('Error', 'Failed to search');
+      } finally {
+        isSearching.value = false;
+      }
+    });
+  }
+
   // Create a new chat or get existing chat
   Future<void> createOrGetChatWithUser(String userId) async {
     isLoading.value = true;
@@ -175,10 +227,14 @@ class ChatController extends GetxController {
       if (chat != null) {
         selectedChatId.value = chat.id;
         loadChatMessages(chat.id);
-
-        if (!userChats.any((c) => c.id == chat.id)) {
-          userChats.add(chat);
-        }
+        // Ensure uniqueness in local list: remove any with same participant set
+        final parts = List<String>.from(chat.participants)..sort();
+        final key = parts.join('_');
+        userChats.removeWhere((c) {
+          final k = (List<String>.from(c.participants)..sort()).join('_');
+          return k == key;
+        });
+        userChats.insert(0, chat);
 
         searchedUser.value = null; // Clear search state
 
@@ -329,6 +385,7 @@ class ChatController extends GetxController {
 
   @override
   void onClose() {
+    _searchDebounce?.cancel();
     _messagesSubscription?.cancel();
 
     // Cancel all status subscriptions

@@ -32,48 +32,6 @@ class ChatListScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         body: Column(
           children: [
-            Obx(() {
-              if (chatController.isSearching.value) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (chatController.searchedUser.value != null) {
-                final user = chatController.searchedUser.value!;
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Theme.of(
-                      context,
-                    ).primaryColor.withOpacity(0.2),
-                    child: Text(
-                      user.fullName.isNotEmpty
-                          ? user.fullName[0].toUpperCase()
-                          : 'U',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  title: Text(user.fullName),
-                  subtitle: Text(user.email),
-                  trailing: ElevatedButton(
-                    onPressed: () {
-                      chatController.createOrGetChatWithUser(user.id);
-                    },
-                    child: Obx(
-                      () =>
-                          chatController.isLoading.value
-                              ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                              : const Text('Chat'),
-                    ),
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            }),
-
             Expanded(
               child: Obx(() {
                 if (chatController.isInitialLoading.value) {
@@ -142,6 +100,9 @@ class ChatListScreen extends StatelessWidget {
                       final chat = chatController.userChats[index];
 
                       // AnimatedSwitcher + Slide + Fade
+                      // Use a stable key based on participant pair to prevent duplicates
+                      final key = (List<String>.from(chat.participants)
+                        ..sort()).join('_');
                       return AnimatedSwitcher(
                         duration: Duration(milliseconds: 500),
                         transitionBuilder: (child, animation) {
@@ -161,7 +122,7 @@ class ChatListScreen extends StatelessWidget {
                           context,
                           chat,
                           chatController,
-                          index.toString(),
+                          key,
                         ),
                       );
                     },

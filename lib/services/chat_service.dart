@@ -20,6 +20,12 @@ class ChatService extends GetxService {
   // Get current user ID
   String? get currentUserId => _authService.firebaseUser.value?.uid;
 
+  // Deterministic key for a user pair to ensure single chat per pair
+  String _pairKey(String a, String b) {
+    final list = [a, b]..sort();
+    return '${list[0]}_${list[1]}';
+  }
+
   // Search user by email
   Future<UserModel?> searchUserByEmail(String email) async {
     try {
@@ -38,6 +44,87 @@ class ChatService extends GetxService {
     } catch (e) {
       print('Error searching user: $e');
       return null;
+    }
+  }
+
+  // New: Search users by email prefix and name prefix (as-you-type)
+  Future<List<UserModel>> searchUsers({
+    required String query,
+    int limit = 20,
+  }) async {
+    try {
+      final q = query.trim();
+      if (q.isEmpty) return [];
+
+      final String qLower = q.toLowerCase();
+
+      // Email prefix search (emails are usually stored lowercase)
+      final emailSnap =
+          await _usersCollection
+              .orderBy('email')
+              .startAt([qLower])
+              .endAt([qLower + '\uf8ff'])
+              .limit(limit)
+              .get();
+
+      // Name prefix search. Firestore is case-sensitive, so try both raw and capitalized variants
+      String capitalize(String s) =>
+          s.isEmpty
+              ? s
+              : s[0].toUpperCase() + (s.length > 1 ? s.substring(1) : '');
+
+      final qCap = capitalize(q);
+
+      final nameSnap1 =
+          await _usersCollection
+              .orderBy('fullName')
+              .startAt([q])
+              .endAt([q + '\uf8ff'])
+              .limit(limit)
+              .get();
+
+      // If the raw-case query yields little due to case, try capitalized
+      final nameSnap2 =
+          qCap == q
+              ? null
+              : await _usersCollection
+                  .orderBy('fullName')
+                  .startAt([qCap])
+                  .endAt([qCap + '\uf8ff'])
+                  .limit(limit)
+                  .get();
+
+      final Map<String, UserModel> merged = {};
+
+      void addFrom(QuerySnapshot snap) {
+        for (final doc in snap.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final user = UserModel.fromMap(data);
+          if (user.id != currentUserId) {
+            merged[user.id] = user;
+          }
+        }
+      }
+
+      addFrom(emailSnap);
+      addFrom(nameSnap1);
+      if (nameSnap2 != null) addFrom(nameSnap2);
+
+      // Optional post-filtering to be a bit more forgiving (case-insensitive contains)
+      final List<UserModel> results =
+          merged.values
+              .where(
+                (u) =>
+                    u.email.toLowerCase().startsWith(qLower) ||
+                    u.fullName.toLowerCase().startsWith(qLower),
+              )
+              .take(limit)
+              .toList();
+
+      return results;
+    } catch (e) {
+      print('Error searching users: $e');
+      return [];
     }
   }
 
@@ -77,12 +164,19 @@ class ChatService extends GetxService {
         throw Exception('Cannot create chat with yourself');
       }
 
-      // Check if chat already exists
+      // Check if chat already exists using unified finder (pairKey first, then participants)
+      final pairKey = _pairKey(currentUserId!, otherUserId);
       final existingChat = await findChatBetweenUsers(
         currentUserId!,
         otherUserId,
       );
       if (existingChat != null) {
+        // Ensure pairKey is set on legacy chats
+        try {
+          await _chatsCollection.doc(existingChat.id).set({
+            'pairKey': pairKey,
+          }, SetOptions(merge: true));
+        } catch (_) {}
         return existingChat;
       }
 
@@ -95,7 +189,9 @@ class ChatService extends GetxService {
         unreadCount: {currentUserId!: 0, otherUserId: 0},
       );
 
-      final docRef = await _chatsCollection.add(chatData.toMap());
+      final data = chatData.toMap();
+      data['pairKey'] = pairKey;
+      final docRef = await _chatsCollection.add(data);
       final createdChat = await docRef.get();
       if (createdChat.exists) {
         return ChatModel.fromMap(
@@ -117,20 +213,30 @@ class ChatService extends GetxService {
     String userId2,
   ) async {
     try {
-      final querySnapshot =
+      final pairKey = _pairKey(userId1, userId2);
+      // 1) Try by pairKey (new schema)
+      final byKey =
+          await _chatsCollection
+              .where('pairKey', isEqualTo: pairKey)
+              .limit(1)
+              .get();
+      if (byKey.docs.isNotEmpty) {
+        final doc = byKey.docs.first;
+        return ChatModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      }
+
+      // 2) Fallback for legacy chats without pairKey: scan by participants
+      final byPart =
           await _chatsCollection
               .where('participants', arrayContains: userId1)
               .get();
-
-      for (final doc in querySnapshot.docs) {
+      for (final doc in byPart.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final participants = List<String>.from(data['participants'] ?? []);
-
         if (participants.contains(userId2)) {
           return ChatModel.fromMap(data, doc.id);
         }
       }
-
       return null;
     } catch (e) {
       print('Error finding chat: $e');
