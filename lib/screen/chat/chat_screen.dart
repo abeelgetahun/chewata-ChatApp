@@ -1,13 +1,14 @@
 import 'dart:async';
 
-import 'package:chewata/screen/home_screen.dart';
+import 'package:chewata/models/user_model.dart';
+import 'package:chewata/screen/chat/user_profile_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:chewata/controller/chat_controller.dart';
 import 'package:chewata/models/message_model.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:chewata/screen/chat/chat_list_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -25,6 +26,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // Add to _ChatScreenState class
   Timer? _seenCheckTimer;
+
+  // Message editing state
+  String? _editingMessageId;
 
   @override
   void initState() {
@@ -73,10 +77,11 @@ class _ChatScreenState extends State<ChatScreen> {
           },
         ),
         title: Obx(() {
-          final chat = _chatController.userChats.firstWhere(
-            (c) => c.id == widget.chatId,
-            orElse: () => null as dynamic,
-          );
+          final matches =
+              _chatController.userChats
+                  .where((c) => c.id == widget.chatId)
+                  .toList();
+          final chat = matches.isNotEmpty ? matches.first : null;
           if (chat == null) {
             return const Text('Chat Not Found');
           }
@@ -86,22 +91,12 @@ class _ChatScreenState extends State<ChatScreen> {
             orElse: () => '',
           );
 
-          return Row(
+          final titleContent = Row(
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: Theme.of(context).primaryColor,
-                backgroundImage:
-                    _chatController.getChatProfilePic(chat) != null
-                        ? NetworkImage(_chatController.getChatProfilePic(chat)!)
-                        : null,
-                child:
-                    _chatController.getChatProfilePic(chat) == null
-                        ? Text(
-                          _chatController.getChatName(chat)[0].toUpperCase(),
-                          style: TextStyle(color: Colors.white),
-                        )
-                        : null,
+              _buildAvatar(
+                context,
+                _chatController.getChatProfilePic(chat),
+                _chatController.getChatName(chat),
               ),
               SizedBox(width: 12),
               Expanded(
@@ -156,6 +151,18 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ],
           );
+
+          return GestureDetector(
+            onTap: () {
+              final UserModel? user = _chatController.getOtherUser(
+                widget.chatId,
+              );
+              if (user != null) {
+                Get.to(() => UserProfileScreen(user: user));
+              }
+            },
+            child: titleContent,
+          );
         }),
         actions: [
           // Add more actions here if needed
@@ -167,9 +174,34 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
             onSelected: (value) {
               if (value == 'profile') {
-                // Handle view profile
+                final user = _chatController.getOtherUser(widget.chatId);
+                if (user != null) {
+                  Get.to(() => UserProfileScreen(user: user));
+                }
               } else if (value == 'clear') {
-                // Handle clear chat
+                showDialog(
+                  context: context,
+                  builder:
+                      (ctx) => AlertDialog(
+                        title: const Text('Clear chat?'),
+                        content: const Text(
+                          'This will delete your messages in this chat. The other user will still see their messages.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.of(ctx).pop();
+                              await _chatController.clearChat(widget.chatId);
+                            },
+                            child: const Text('Clear'),
+                          ),
+                        ],
+                      ),
+                );
               }
             },
           ),
@@ -232,6 +264,25 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
 
           // Message input
+          if (_editingMessageId != null)
+            Container(
+              color: isDarkMode ? Colors.grey[850] : Colors.blue[50],
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.edit, size: 16),
+                  const SizedBox(width: 8),
+                  const Expanded(child: Text('Editing message')),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      setState(() => _editingMessageId = null);
+                      _messageController.clear();
+                    },
+                  ),
+                ],
+              ),
+            ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
             decoration: BoxDecoration(
@@ -275,12 +326,25 @@ class _ChatScreenState extends State<ChatScreen> {
                 CircleAvatar(
                   backgroundColor: Theme.of(context).primaryColor,
                   child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white),
-                    onPressed: () {
-                      if (_messageController.text.trim().isNotEmpty) {
-                        _chatController.sendMessage(_messageController.text);
-                        _messageController.clear();
+                    icon: Icon(
+                      _editingMessageId == null ? Icons.send : Icons.check,
+                      color: Colors.white,
+                    ),
+                    onPressed: () async {
+                      final text = _messageController.text.trim();
+                      if (text.isEmpty) return;
+
+                      if (_editingMessageId == null) {
+                        await _chatController.sendMessage(text);
+                      } else {
+                        await _chatController.editMessage(
+                          widget.chatId,
+                          _editingMessageId!,
+                          text,
+                        );
+                        setState(() => _editingMessageId = null);
                       }
+                      _messageController.clear();
                     },
                   ),
                 ),
@@ -292,13 +356,57 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Widget _buildAvatar(
+    BuildContext context,
+    String? imageUrl,
+    String displayName,
+  ) {
+    String initials = 'U';
+    final trimmed = displayName.trim();
+    if (trimmed.isNotEmpty) {
+      initials = trimmed.characters.first.toUpperCase();
+    }
+
+    final bool hasValidUrl =
+        imageUrl != null &&
+        imageUrl.trim().isNotEmpty &&
+        (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'));
+
+    final fallback = Text(
+      initials,
+      style: const TextStyle(color: Colors.white),
+    );
+
+    if (!hasValidUrl) {
+      return CircleAvatar(
+        radius: 18,
+        backgroundColor: Theme.of(context).primaryColor,
+        child: fallback,
+      );
+    }
+
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: Theme.of(context).primaryColor,
+      child: ClipOval(
+        child: Image.network(
+          imageUrl,
+          width: 36,
+          height: 36,
+          fit: BoxFit.cover,
+          errorBuilder: (ctx, err, st) => fallback,
+        ),
+      ),
+    );
+  }
+
   // In chat_screen.dart, modify the _buildMessageBubble method:
   Widget _buildMessageBubble(BuildContext context, MessageModel message) {
     final currentUserId = _chatController.currentUser?.id;
     final isCurrentUser = message.senderId == currentUserId;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return Padding(
+    final bubble = Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
         mainAxisAlignment:
@@ -319,7 +427,9 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               decoration: BoxDecoration(
                 color:
-                    isCurrentUser
+                    message.isDeleted
+                        ? (isDarkMode ? Colors.grey[800] : Colors.grey[200])
+                        : isCurrentUser
                         ? Theme.of(context).primaryColor.withOpacity(0.9)
                         : isDarkMode
                         ? Colors.black
@@ -341,23 +451,49 @@ class _ChatScreenState extends State<ChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Message text
-                  Text(
-                    message.text,
-                    style: GoogleFonts.ubuntu(
-                      color:
-                          isCurrentUser
-                              ? Colors.white
-                              : isDarkMode
-                              ? Colors.white
-                              : Colors.black,
+                  if (message.isDeleted)
+                    Text(
+                      isCurrentUser
+                          ? 'You deleted this message'
+                          : 'Message deleted',
+                      style: GoogleFonts.ubuntu(
+                        fontStyle: FontStyle.italic,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                      ),
+                    )
+                  else
+                    Text(
+                      message.text,
+                      style: GoogleFonts.ubuntu(
+                        color:
+                            isCurrentUser
+                                ? Colors.white
+                                : isDarkMode
+                                ? Colors.white
+                                : Colors.black,
+                      ),
                     ),
-                  ),
 
                   // Time and read status
                   const SizedBox(height: 4),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (message.isEdited && !message.isDeleted) ...[
+                        Text(
+                          'edited · ',
+                          style: GoogleFonts.ubuntu(
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic,
+                            color:
+                                isCurrentUser
+                                    ? Colors.white.withOpacity(0.7)
+                                    : isDarkMode
+                                    ? Colors.grey[400]
+                                    : Colors.grey[700],
+                          ),
+                        ),
+                      ],
                       // Display message time
                       Text(
                         DateFormat.Hm().format(message.sentAt),
@@ -399,6 +535,64 @@ class _ChatScreenState extends State<ChatScreen> {
           if (isCurrentUser) const SizedBox(width: 8),
         ],
       ),
+    );
+
+    return GestureDetector(
+      onLongPress: () => _showMessageActions(context, message),
+      child: bubble,
+    );
+  }
+
+  void _showMessageActions(BuildContext context, MessageModel message) {
+    final isCurrentUser = message.senderId == _chatController.currentUser?.id;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!message.isDeleted)
+                ListTile(
+                  leading: const Icon(Icons.copy),
+                  title: const Text('Copy'),
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: message.text));
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+              if (isCurrentUser && !message.isDeleted)
+                ListTile(
+                  leading: const Icon(Icons.edit),
+                  title: const Text('Edit'),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    setState(() {
+                      _editingMessageId = message.id;
+                      _messageController.text = message.text;
+                    });
+                  },
+                ),
+              if (isCurrentUser)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  title: const Text('Delete'),
+                  onTap: () async {
+                    Navigator.of(ctx).pop();
+                    await _chatController.deleteMessage(
+                      widget.chatId,
+                      message.id,
+                    );
+                  },
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 

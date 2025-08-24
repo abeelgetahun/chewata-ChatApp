@@ -385,7 +385,103 @@ class ChatListScreen extends StatelessWidget {
           chatController.loadChatMessages(chat.id);
           Get.toNamed('/chat/${chat.id}');
         },
+        onLongPress: () => _showChatActions(context, chat, chatController),
       ),
+    );
+  }
+
+  void _showChatActions(
+    BuildContext context,
+    ChatModel chat,
+    ChatController controller,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.mark_email_read_outlined, size: 16),
+                title: Text('Mark as read', style: GoogleFonts.ubuntu()),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  await controller.markChatAsRead(chat.id);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.cleaning_services_outlined, size: 16),
+                title: Text('Clear my messages', style: GoogleFonts.ubuntu()),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final confirm = await _confirm(ctx, 'Clear your messages?');
+                  if (confirm == true) {
+                    await controller.clearMyMessages(chat.id);
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.visibility_off_outlined, size: 16),
+                title: Text('Hide chat', style: GoogleFonts.ubuntu()),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  await controller.hideChat(chat.id);
+                },
+              ),
+              const Divider(height: 0),
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_forever_outlined,
+                  size: 16,
+                  color: Colors.red,
+                ),
+                title: Text(
+                  'Delete chat for everyone',
+                  style: GoogleFonts.ubuntu(color: Colors.red, fontSize: 14),
+                ),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final confirm = await _confirm(
+                    ctx,
+                    'Delete this chat for everyone?',
+                  );
+                  if (confirm == true) {
+                    await controller.deleteChatForEveryone(chat.id);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<bool?> _confirm(BuildContext context, String title) async {
+    return showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: Text(title),
+            content: Text(
+              'This action affects only your side and cannot be undone.',
+              style: GoogleFonts.ubuntu(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text('Cancel', style: GoogleFonts.ubuntu()),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: Text('OK', style: GoogleFonts.ubuntu()),
+              ),
+            ],
+          ),
     );
   }
 
