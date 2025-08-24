@@ -352,11 +352,11 @@ class AuthService extends GetxController {
 
       print('Updating presence for user ${user.uid}: isOnline=$isOnline');
 
-      // First update Firestore since it's more critical for UI
-      await _db.collection('users').doc(user.uid).update({
+      // First (optimistic) update Firestore for UI immediacy
+      await _db.collection('users').doc(user.uid).set({
         'isOnline': isOnline,
         'lastSeen': isOnline ? null : FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
       // Update user model if needed
       if (userModel.value != null) {
@@ -374,18 +374,25 @@ class AuthService extends GetxController {
 
       // Make sure user is still authenticated before updating Realtime Database
       if (_auth.currentUser != null) {
-        // Also update Realtime Database directly
+        // Also update Realtime Database, ensuring onDisconnect is set before online
         final userStatusRef = _database.ref('status/${user.uid}');
-        await userStatusRef.set({
-          'online': isOnline,
-          'lastChanged': ServerValue.timestamp,
-        });
-
-        // If we're setting user as online, set up the disconnect handler
         if (isOnline) {
+          // Setup onDisconnect first, then set online
+          await userStatusRef.onDisconnect().set({
+            'online': false,
+            'lastChanged': ServerValue.timestamp,
+          });
+          await userStatusRef.set({
+            'online': true,
+            'lastChanged': ServerValue.timestamp,
+          });
           _setupPresenceDisconnectHook(user.uid);
         } else {
-          // If explicitly going offline, clear any disconnect handlers
+          // Explicit offline: set offline and clear listeners
+          await userStatusRef.set({
+            'online': false,
+            'lastChanged': ServerValue.timestamp,
+          });
           _presenceSubscription?.cancel();
           _presenceSubscription = null;
         }
@@ -476,11 +483,16 @@ class AuthService extends GetxController {
         final data = event.snapshot.value as Map<dynamic, dynamic>;
         final isOnline = data['online'] as bool? ?? false;
 
-        // Only update Firestore if the status has changed to offline
+        // Mirror RTDB presence to Firestore for both transitions
         if (!isOnline) {
           _db.collection('users').doc(userId).update({
             'isOnline': false,
             'lastSeen': FieldValue.serverTimestamp(),
+          });
+        } else {
+          _db.collection('users').doc(userId).update({
+            'isOnline': true,
+            'lastSeen': null,
           });
         }
       });

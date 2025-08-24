@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:chewata/models/chat_model.dart';
@@ -136,11 +137,17 @@ class ChatService extends GetxService {
           snapshot.data() as Map<String, dynamic>,
         );
 
-        // Get the current user's showOnlineStatus
-        // Respect privacy: if the target user hides their status, surface offline
-
-        // If the target user hides their status, show them as offline with no last seen
+        // Respect privacy in both directions:
+        // 1) If the target user hides their status, expose them as offline (no lastSeen)
         if (!user.showOnlineStatus) {
+          return user.copyWith(isOnline: false, lastSeen: null);
+        }
+
+        // 2) If the current viewer has disabled their own status visibility,
+        //    they should NOT be able to see others' status either.
+        final bool viewerAllowsStatus =
+            _authService.userModel.value?.showOnlineStatus ?? true;
+        if (!viewerAllowsStatus) {
           return user.copyWith(isOnline: false, lastSeen: null);
         }
 
@@ -280,18 +287,68 @@ class ChatService extends GetxService {
         });
   }
 
-  // Get messages for a specific chat
+  // Get messages for a specific chat (merge subcollection and legacy top-level messages)
   Stream<List<MessageModel>> getChatMessages(String chatId) {
-    return _chatsCollection
-        .doc(chatId)
-        .collection('messages')
-        .orderBy('sentAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            return MessageModel.fromMap(doc.data(), doc.id);
-          }).toList();
-        });
+    final subcollectionStream =
+        _chatsCollection
+            .doc(chatId)
+            .collection('messages')
+            .orderBy('sentAt', descending: true)
+            .snapshots();
+
+    // Legacy: some older code stored messages in a top-level collection
+    final topLevelStream =
+        _db
+            .collection('messages')
+            .where('chatId', isEqualTo: chatId)
+            .orderBy('sentAt', descending: true)
+            .snapshots();
+
+    // Merge both streams manually to avoid extra deps
+    final controller = StreamController<List<MessageModel>>();
+    List<MessageModel> subMsgs = [];
+    List<MessageModel> topMsgs = [];
+    StreamSubscription? subA;
+    StreamSubscription? subB;
+
+    void emit() {
+      final all = <MessageModel>[...subMsgs, ...topMsgs];
+      all.sort((a, b) => b.sentAt.compareTo(a.sentAt));
+      controller.add(all);
+    }
+
+    subA = subcollectionStream.listen((snapshot) {
+      final tmp = <MessageModel>[];
+      for (final doc in snapshot.docs) {
+        try {
+          tmp.add(MessageModel.fromMap(doc.data(), doc.id));
+        } catch (e) {
+          print('Skipping malformed subcollection message ${doc.id}: $e');
+        }
+      }
+      subMsgs = tmp;
+      emit();
+    }, onError: controller.addError);
+
+    subB = topLevelStream.listen((snapshot) {
+      final tmp = <MessageModel>[];
+      for (final doc in snapshot.docs) {
+        try {
+          tmp.add(MessageModel.fromMap(doc.data(), doc.id));
+        } catch (e) {
+          print('Skipping malformed top-level message ${doc.id}: $e');
+        }
+      }
+      topMsgs = tmp;
+      emit();
+    }, onError: controller.addError);
+
+    controller.onCancel = () async {
+      await subA?.cancel();
+      await subB?.cancel();
+    };
+
+    return controller.stream;
   }
 
   // Hide chat for the current user (soft delete from list)
@@ -528,6 +585,18 @@ class ChatService extends GetxService {
         batch.update(doc.reference, {'isDelivered': true});
       }
 
+      // Also update legacy top-level messages
+      final legacySnap =
+          await _db
+              .collection('messages')
+              .where('chatId', isEqualTo: chatId)
+              .where('senderId', isEqualTo: senderId)
+              .where('isDelivered', isEqualTo: false)
+              .get();
+      for (final doc in legacySnap.docs) {
+        batch.update(doc.reference, {'isDelivered': true});
+      }
+
       await batch.commit();
     } catch (e) {
       print('Error marking messages as delivered: $e');
@@ -571,6 +640,17 @@ class ChatService extends GetxService {
         for (final doc in messagesSnapshot.docs) {
           batch.update(doc.reference, {'isRead': true});
         }
+        // Also mark legacy top-level messages as read
+        final legacySnap =
+            await _db
+                .collection('messages')
+                .where('chatId', isEqualTo: chatId)
+                .where('senderId', isNotEqualTo: currentUserId)
+                .where('isRead', isEqualTo: false)
+                .get();
+        for (final doc in legacySnap.docs) {
+          batch.update(doc.reference, {'isRead': true});
+        }
 
         await batch.commit();
       }
@@ -586,9 +666,20 @@ class ChatService extends GetxService {
       if (!doc.exists) return null;
 
       final data = doc.data() as Map<String, dynamic>;
+      UserModel user = UserModel.fromMap(data);
 
-      // Include online status in user info
-      return UserModel.fromMap(data);
+      // Apply the same privacy reciprocity used in the stream
+      if (!user.showOnlineStatus) {
+        return user.copyWith(isOnline: false, lastSeen: null);
+      }
+
+      final bool viewerAllowsStatus =
+          _authService.userModel.value?.showOnlineStatus ?? true;
+      if (!viewerAllowsStatus) {
+        return user.copyWith(isOnline: false, lastSeen: null);
+      }
+
+      return user;
     } catch (e) {
       print('Error getting user info: $e');
       return null;
