@@ -142,6 +142,22 @@ class AccountController extends GetxController {
   }
 
   Future<bool> updatePassword() async {
+    // Restrict password change for demo/test account
+    final currentAuthUser = _authService.firebaseUser.value;
+    final String? email = currentAuthUser?.email?.toLowerCase();
+    if (email == 'abel@gmail.com') {
+      // Show a clear, blocking alert and abort
+      Get.defaultDialog(
+        title: 'Password change disabled',
+        middleText:
+            'Password changes are disabled for the demo account (abel@gmail.com). Please sign in with your own account to change the password.',
+        textConfirm: 'OK',
+        confirmTextColor: Colors.white,
+        onConfirm: () => Get.back(),
+      );
+      return false;
+    }
+
     if (currentPasswordController.text.isEmpty ||
         newPasswordController.text.isEmpty ||
         confirmPasswordController.text.isEmpty) {

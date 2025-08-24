@@ -1,4 +1,3 @@
- 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:chewata/controller/account_controller.dart';
@@ -33,7 +32,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title:   Text('Personal Information' , style: GoogleFonts.ubuntu()),
+        title: Text('Personal Information', style: GoogleFonts.ubuntu()),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Get.back(),
@@ -45,83 +44,68 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         }
 
         return SafeArea(
-           child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                  _sectionCard(
-                    context: context,
-                    title: 'Profile Information',
-                    icon: Icons.person_outline,
-                    child: Column(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _sectionCard(
+                  context: context,
+                  title: 'Profile Information',
+                  icon: Icons.person_outline,
+                  child: Column(
                     children: [
                       TextFormField(
-                      controller: controller.fullNameController,
-                      enabled: !controller.isUpdating.value,
-                      textInputAction: TextInputAction.next,
-                      textCapitalization: TextCapitalization.words,
-                      style: GoogleFonts.ubuntu(),
-                      decoration: _inputDecoration(
-                        context,
-                        label: 'Full Name',
-                        hint: 'Enter your full name',
-                        icon: Icons.person,
-                      ).copyWith(
-                        labelStyle: GoogleFonts.ubuntu(),
-                        hintStyle: GoogleFonts.ubuntu(),
-                      ),
+                        controller: controller.fullNameController,
+                        enabled: !controller.isUpdating.value,
+                        textInputAction: TextInputAction.next,
+                        textCapitalization: TextCapitalization.words,
+                        style: GoogleFonts.ubuntu(),
+                        decoration: _inputDecoration(
+                          context,
+                          label: 'Full Name',
+                          hint: 'Enter your full name',
+                          icon: Icons.person,
+                        ).copyWith(
+                          labelStyle: GoogleFonts.ubuntu(),
+                          hintStyle: GoogleFonts.ubuntu(),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
-                      controller: controller.birthDateController,
-                      readOnly: true,
-                      onTap: () => _selectDate(context, controller),
-                      style: GoogleFonts.ubuntu(),
-                      decoration: _inputDecoration(
-                        context,
-                        label: 'Birth Date',
-                        hint: 'Select your birth date',
-                        icon: Icons.cake_outlined,
-                        suffix: const Icon(Icons.calendar_today, size: 18),
-                      ).copyWith(
-                        labelStyle: GoogleFonts.ubuntu(),
-                        hintStyle: GoogleFonts.ubuntu(),
-                      ),
+                        controller: controller.birthDateController,
+                        readOnly: true,
+                        onTap: () => _selectDate(context, controller),
+                        style: GoogleFonts.ubuntu(),
+                        decoration: _inputDecoration(
+                          context,
+                          label: 'Birth Date',
+                          hint: 'Select your birth date',
+                          icon: Icons.cake_outlined,
+                          suffix: const Icon(Icons.calendar_today, size: 18),
+                        ).copyWith(
+                          labelStyle: GoogleFonts.ubuntu(),
+                          hintStyle: GoogleFonts.ubuntu(),
+                        ),
                       ),
                       const SizedBox(height: 20),
-                      SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
+                      _PrimaryGradientButton(
                         onPressed:
-                          controller.isUpdating.value
-                            ? null
-                            : () => controller.updatePersonalInfo(),
-                        icon:
-                          controller.isUpdating.value
-                            ? SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                              theme.colorScheme.onPrimary,
-                              ),
-                            ),
-                            )
-                            : const Icon(Icons.save_outlined),
-                        label: Text('Save Changes', style: GoogleFonts.ubuntu()),
-                        style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        ),
-                      ),
+                            controller.isUpdating.value
+                                ? null
+                                : () => controller.updatePersonalInfo(),
+                        isLoading: controller.isUpdating.value,
+                        icon: Icons.save_outlined,
+                        label: 'Save Changes',
+                        colors: [
+                          theme.colorScheme.primary,
+                          theme.colorScheme.primary.withOpacity(0.8),
+                        ],
                       ),
                     ],
-                    ),
-                  ),   const SizedBox(height: 20),
+                  ),
+                ),
+                const SizedBox(height: 20),
 
                 _sectionCard(
                   context: context,
@@ -208,34 +192,18 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed:
-                              controller.isUpdating.value
-                                  ? null
-                                  : () => controller.updatePassword(),
-                          icon:
-                              controller.isUpdating.value
-                                  ? SizedBox(
-                                    height: 18,
-                                    width: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        theme.colorScheme.onPrimary,
-                                      ),
-                                    ),
-                                  )
-                                  : const Icon(Icons.password_outlined),
-                          label: const Text('Change Password'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
+                      _PrimaryGradientButton(
+                        onPressed:
+                            controller.isUpdating.value
+                                ? null
+                                : () => controller.updatePassword(),
+                        isLoading: controller.isUpdating.value,
+                        icon: Icons.password_outlined,
+                        label: 'Change Password',
+                        colors: [
+                          theme.colorScheme.secondary,
+                          theme.colorScheme.primary,
+                        ],
                       ),
                     ],
                   ),
@@ -352,5 +320,102 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     if (picked != null) {
       controller.setSelectedBirthDate(picked);
     }
+  }
+}
+
+class _PrimaryGradientButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final bool isLoading;
+  final IconData icon;
+  final String label;
+  final List<Color> colors;
+
+  const _PrimaryGradientButton({
+    Key? key,
+    required this.onPressed,
+    required this.isLoading,
+    required this.icon,
+    required this.label,
+    required this.colors,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bool isDisabled = onPressed == null || isLoading;
+
+    final List<Color> effectiveColors =
+        isDisabled ? colors.map((c) => c.withOpacity(0.5)).toList() : colors;
+
+    return SizedBox(
+      width: double.infinity,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: effectiveColors),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: effectiveColors.first.withOpacity(0.35),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: isDisabled ? null : onPressed,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child:
+                    isLoading
+                        ? Row(
+                          key: const ValueKey('loading'),
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  theme.colorScheme.onPrimary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Please wait…',
+                              style: GoogleFonts.ubuntu(
+                                color: theme.colorScheme.onPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        )
+                        : Row(
+                          key: const ValueKey('content'),
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(icon, color: theme.colorScheme.onPrimary),
+                            const SizedBox(width: 10),
+                            Text(
+                              label,
+                              style: GoogleFonts.ubuntu(
+                                color: theme.colorScheme.onPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
