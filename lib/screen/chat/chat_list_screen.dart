@@ -38,7 +38,13 @@ class ChatListScreen extends StatelessWidget {
                   return _buildShimmerLoading(context);
                 }
 
-                if (chatController.userChats.isEmpty) {
+                // Only show private (non-group) chats in the Chewata tab
+                final privateChats =
+                    chatController.userChats
+                        .where((c) => !c.isGroupChat)
+                        .toList();
+
+                if (privateChats.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -86,18 +92,19 @@ class ChatListScreen extends StatelessWidget {
                   },
                   child: ListView.builder(
                     physics: BouncingScrollPhysics(),
+                    // Show a loader slot if there may be more chats to fetch
                     itemCount:
-                        chatController.userChats.length +
+                        privateChats.length +
                         (chatController.hasMoreChats.value ? 1 : 0),
                     itemBuilder: (context, index) {
-                      if (index >= chatController.userChats.length) {
+                      if (index >= privateChats.length) {
                         return Padding(
                           padding: const EdgeInsets.all(16),
                           child: Center(child: CircularProgressIndicator()),
                         );
                       }
 
-                      final chat = chatController.userChats[index];
+                      final chat = privateChats[index];
 
                       // AnimatedSwitcher + Slide + Fade
                       // Use a stable key based on participant pair to prevent duplicates
@@ -254,8 +261,10 @@ class ChatListScreen extends StatelessWidget {
               right: 0,
               bottom: 5,
               child: Obx(() {
-                final isOnline =
-                    chatController.userOnlineStatus[otherUserId] ?? false;
+                // Use privacy-aware indicator
+                final isOnline = chatController.shouldShowOnlineIndicator(
+                  otherUserId,
+                );
                 return Container(
                   width: 10,
                   height: 10,

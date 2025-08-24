@@ -2,11 +2,13 @@ import 'package:chewata/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_state_manager/src/rx_flutter/rx_disposable.dart';
+import 'dart:async';
 
 // In app_life_cycle_service.dart
 class AppLifecycleService extends GetxService {
   final AuthService auth = Get.find();
   final RxBool isConnected = true.obs;
+  Timer? _graceTimer;
 
   @override
   void onInit() {
@@ -18,11 +20,17 @@ class AppLifecycleService extends GetxService {
         print('App resumed - setting user online');
         auth.updatePresence(true);
         isConnected.value = true;
+        _graceTimer?.cancel();
       },
       suspendCallBack: () {
-        print('App suspended - setting user offline');
-        auth.updatePresence(false);
-        isConnected.value = false;
+        // Use a short grace period to avoid flapping during quick app switches
+        print('App suspended - scheduling offline update');
+        _graceTimer?.cancel();
+        _graceTimer = Timer(const Duration(seconds: 5), () {
+          print('Grace period passed - setting user offline');
+          auth.updatePresence(false);
+          isConnected.value = false;
+        });
       },
     );
 
@@ -35,6 +43,7 @@ class AppLifecycleService extends GetxService {
   @override
   void onClose() {
     // Ensure user is marked offline when service is closed
+    _graceTimer?.cancel();
     auth.updatePresence(false);
     super.onClose();
   }
