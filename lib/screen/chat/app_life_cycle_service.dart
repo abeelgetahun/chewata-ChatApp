@@ -19,6 +19,8 @@ class AppLifecycleService extends GetxService {
       resumeCallBack: () {
         print('App resumed - setting user online');
         auth.updatePresence(true);
+        // Treat app resume as activity
+        auth.resetSessionTimer();
         isConnected.value = true;
         _graceTimer?.cancel();
       },

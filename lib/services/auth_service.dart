@@ -37,8 +37,9 @@ class AuthService extends GetxController {
     }
   }
 
-  // Session timeout variables (30 minutes inactivity timeout)
-  final int _sessionTimeoutMinutes = 30;
+  // Session timeout variables (7 days inactivity timeout)
+  // If the user doesn't interact with the app for this duration, they will be logged out.
+  final Duration _sessionTimeout = const Duration(days: 7);
   Timer? _sessionTimer;
   final RxBool _isSessionActive = true.obs;
 
@@ -93,7 +94,7 @@ class AuthService extends GetxController {
     _cancelSessionTimer();
     _isSessionActive.value = true;
 
-    _sessionTimer = Timer(Duration(minutes: _sessionTimeoutMinutes), () {
+    _sessionTimer = Timer(_sessionTimeout, () {
       // Session timeout - log the user out
       if (firebaseUser.value != null) {
         _isSessionActive.value = false;

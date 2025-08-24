@@ -24,6 +24,9 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
+  // A navigator observer to catch route changes as activity signals
+  final _routeObserver = RouteObserver<PageRoute<dynamic>>();
+
   @override
   void initState() {
     super.initState();
@@ -67,6 +70,27 @@ class _AppState extends State<App> {
           primaryColor: Color.fromARGB(255, 25, 108, 176),
         ),
         initialRoute: '/',
+        // Any user gesture will reset the inactivity timer
+        builder: (context, child) {
+          return Listener(
+            onPointerDown: (_) => AuthService.instance.resetSessionTimer(),
+            child: Focus(
+              autofocus: true,
+              onKeyEvent: (_, __) {
+                AuthService.instance.resetSessionTimer();
+                return KeyEventResult.ignored;
+              },
+              child: child ?? const SizedBox.shrink(),
+            ),
+          );
+        },
+        // Add navigator observers to detect navigation (considered activity)
+        navigatorObservers: [
+          _routeObserver,
+          _ActivityObserver(
+            onActivity: () => AuthService.instance.resetSessionTimer(),
+          ),
+        ],
         getPages: [
           GetPage(name: '/', page: () => _determineInitialScreen()),
           GetPage(name: '/onboarding', page: () => const OnBoardingScreen()),
@@ -117,5 +141,47 @@ class _AppState extends State<App> {
         return const OnBoardingScreen();
       }
     });
+  }
+}
+
+// A simple NavigatorObserver to consider navigation as activity
+class _ActivityObserver extends NavigatorObserver {
+  final VoidCallback onActivity;
+  _ActivityObserver({required this.onActivity});
+
+  void _hit() {
+    try {
+      onActivity();
+    } catch (_) {}
+  }
+
+  @override
+  void didPush(Route route, Route? previousRoute) {
+    _hit();
+    super.didPush(route, previousRoute);
+  }
+
+  @override
+  void didPop(Route route, Route? previousRoute) {
+    _hit();
+    super.didPop(route, previousRoute);
+  }
+
+  @override
+  void didReplace({Route? newRoute, Route? oldRoute}) {
+    _hit();
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+  }
+
+  @override
+  void didStartUserGesture(Route route, Route? previousRoute) {
+    _hit();
+    super.didStartUserGesture(route, previousRoute);
+  }
+
+  @override
+  void didStopUserGesture() {
+    _hit();
+    super.didStopUserGesture();
   }
 }
