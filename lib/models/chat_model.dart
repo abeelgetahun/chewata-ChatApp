@@ -9,6 +9,12 @@ class ChatModel {
   final String? lastMessageSenderId;
   final Map<String, int> unreadCount; // Map of userId -> unread count
   final Map<String, bool> hiddenBy; // Map of userId -> hidden
+  // Group chat specific
+  final bool isGroupChat;
+  final String? groupName;
+  final String? groupCreatorId;
+  final DateTime? groupCreatedAt;
+  final List<String> groupAdmins;
 
   ChatModel({
     required this.id,
@@ -19,6 +25,11 @@ class ChatModel {
     this.lastMessageSenderId,
     required this.unreadCount,
     this.hiddenBy = const {},
+    this.isGroupChat = false,
+    this.groupName,
+    this.groupCreatorId,
+    this.groupCreatedAt,
+    this.groupAdmins = const [],
   });
 
   Map<String, dynamic> toMap() {
@@ -30,6 +41,11 @@ class ChatModel {
       'lastMessageSenderId': lastMessageSenderId,
       'unreadCount': unreadCount,
       'hiddenBy': hiddenBy,
+      'isGroupChat': isGroupChat,
+      'groupName': groupName,
+      'groupCreatorId': groupCreatorId,
+      'groupCreatedAt': groupCreatedAt,
+      'groupAdmins': groupAdmins,
     };
   }
 
@@ -47,6 +63,14 @@ class ChatModel {
         lastMessageSenderId: map['lastMessageSenderId'],
         unreadCount: Map<String, int>.from(map['unreadCount'] ?? {}),
         hiddenBy: Map<String, bool>.from(map['hiddenBy'] ?? {}),
+        isGroupChat: (map['isGroupChat'] as bool?) ?? false,
+        groupName: map['groupName'] as String?,
+        groupCreatorId: map['groupCreatorId'] as String?,
+        groupCreatedAt:
+            (map['groupCreatedAt'] is Timestamp)
+                ? (map['groupCreatedAt'] as Timestamp).toDate()
+                : null,
+        groupAdmins: List<String>.from(map['groupAdmins'] ?? const <String>[]),
       );
     } catch (e) {
       print('Error parsing ChatModel from map: $e');

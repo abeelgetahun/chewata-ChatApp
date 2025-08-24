@@ -7,11 +7,11 @@ import 'package:chewata/screen/chat/app_life_cycle_service.dart';
 import 'package:chewata/screen/chat/chat_screen.dart';
 import 'package:chewata/screen/chat/search_screen.dart';
 import 'package:chewata/screen/home_screen.dart';
+import 'package:chewata/screen/GroupChatScreen.dart';
 import 'package:chewata/screen/onboarding/onboarding.dart';
 import 'package:chewata/services/auth_service.dart';
 import 'package:chewata/services/chat_service.dart';
 import 'package:chewata/services/setting_service.dart';
-import 'package:chewata/utils/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:get/get.dart';
@@ -83,6 +83,13 @@ class _AppState extends State<App> {
                 Get.put(ChatController());
               }
             }),
+          ),
+          GetPage(
+            name: '/group-chat/:chatId',
+            page: () {
+              final chatId = Get.parameters['chatId']!;
+              return GroupChatScreen(chatId: chatId);
+            },
           ),
           GetPage(
             name: '/search',

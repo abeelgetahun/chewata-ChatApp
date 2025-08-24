@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -5,1136 +6,794 @@ import 'package:chewata/models/chat_model.dart';
 import 'package:chewata/models/message_model.dart';
 import 'package:chewata/models/user_model.dart';
 import 'package:chewata/controller/auth_controller.dart';
-import 'dart:math' as math;
 
 class GroupChatScreen extends StatefulWidget {
   final String chatId;
-  
-  const GroupChatScreen({
-    Key? key,
-    required this.chatId,
-  }) : super(key: key);
+
+  const GroupChatScreen({Key? key, required this.chatId}) : super(key: key);
 
   @override
   State<GroupChatScreen> createState() => _GroupChatScreenState();
 }
 
-class _GroupChatScreenState extends State<GroupChatScreen> with TickerProviderStateMixin {
+class _GroupChatScreenState extends State<GroupChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   final RxBool _isLoading = true.obs;
   final Rx<ChatModel?> _groupChat = Rx<ChatModel?>(null);
   final RxList<MessageModel> _messages = <MessageModel>[].obs;
   final RxMap<String, UserModel> _userCache = <String, UserModel>{}.obs;
-  
+
   final AuthController _authController = Get.find<AuthController>();
-  
-  late AnimationController _sendButtonAnimController;
-  late Animation<double> _sendButtonAnim;
-  
+
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _chatSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _msgSub;
+
   @override
   void initState() {
     super.initState();
-    
-    _sendButtonAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    
-    _sendButtonAnim = CurvedAnimation(
-      parent: _sendButtonAnimController,
-      curve: Curves.easeInOut,
-    );
-    
-    _loadGroupChat();
-    _setupMessageListener();
-    
-    _messageController.addListener(() {
-      if (_messageController.text.isNotEmpty) {
-        _sendButtonAnimController.forward();
-      } else {
-        _sendButtonAnimController.reverse();
-      }
-    });
+    _listenGroupChat();
+    _listenMessages();
   }
-  
+
   @override
   void dispose() {
-    _sendButtonAnimController.dispose();
+    _chatSub?.cancel();
+    _msgSub?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
-  
-  void _loadGroupChat() async {
-    try {
-      _isLoading.value = true;
-      
-      // Get the group chat document
-      final doc = await FirebaseFirestore.instance
-          .collection('chats')
-          .doc(widget.chatId)
-          .get();
-      
-      if (!doc.exists) {
-        Get.snackbar(
-          'Error',
-          'Group chat not found',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-        Get.back();
-        return;
-      }
-      
-      // Create chat model
-      _groupChat.value = ChatModel.fromMap(
-        doc.data() as Map<String, dynamic>,
-        doc.id,
-      );
-      
-      // Reset unread count for current user
-      if (_groupChat.value != null) {
-        final currentUserId = _authController.currentUser.value!.id;
-        await FirebaseFirestore.instance
-            .collection('chats')
-            .doc(widget.chatId)
-            .update({
-          'unreadCount.$currentUserId': 0,
+
+  void _listenGroupChat() {
+    _chatSub = FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.chatId)
+        .snapshots()
+        .listen((doc) {
+          if (!doc.exists) {
+            _isLoading.value = false;
+            return;
+          }
+          _groupChat.value = ChatModel.fromMap(doc.data()!, doc.id);
+          _isLoading.value = false;
+          // Preload members
+          for (final uid in _groupChat.value!.participants) {
+            _ensureUserLoaded(uid);
+          }
         });
-        
-        // Prefetch user data for participants
-        for (final userId in _groupChat.value!.participants) {
-          _fetchUserData(userId);
-        }
-      }
-      
-      _isLoading.value = false;
-    } catch (e) {
-      print('Error loading group chat: $e');
-      _isLoading.value = false;
-    }
   }
-  
-  void _setupMessageListener() {
-    FirebaseFirestore.instance
+
+  void _listenMessages() {
+    _msgSub = FirebaseFirestore.instance
         .collection('messages')
         .where('chatId', isEqualTo: widget.chatId)
-        .orderBy('sentAt', descending: true)
-        .limit(50)
         .snapshots()
-        .listen((snapshot) {
-      final messages = snapshot.docs
-          .map((doc) => MessageModel.fromMap(
-              doc.data() as Map<String, dynamic>,
-              doc.id,
-            ))
-          .toList();
-      
-      _messages.value = messages;
-      
-      // Mark messages as read
-      _markMessagesAsRead(messages);
-      
-      // Fetch user data for any new message senders
-      for (final message in messages) {
-        if (!_userCache.containsKey(message.senderId)) {
-          _fetchUserData(message.senderId);
-        }
-      }
-      
-      // Scroll to bottom if new message is from current user
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_messages.isNotEmpty && 
-            _messages.first.senderId == _authController.currentUser.value?.id) {
+        .listen((snap) async {
+          final msgs =
+              snap.docs
+                  .map((d) => MessageModel.fromMap(d.data(), d.id))
+                  .toList();
+          msgs.sort((a, b) => a.sentAt.compareTo(b.sentAt));
+          _messages.value = msgs;
           _scrollToBottom();
-        }
-      });
-    });
+          await _markMessagesAsRead();
+          // Ensure senders cached
+          for (final m in msgs) {
+            _ensureUserLoaded(m.senderId);
+          }
+        });
   }
-  
-  void _fetchUserData(String userId) async {
+
+  Future<void> _ensureUserLoaded(String userId) async {
+    if (_userCache.containsKey(userId)) return;
     try {
-      if (_userCache.containsKey(userId)) return;
-      
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
-      
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .get();
       if (doc.exists) {
-        final userData = doc.data() as Map<String, dynamic>;
-        _userCache[userId] = UserModel.fromMap(userData);
+        final data = doc.data()!;
+        var user = UserModel.fromMap(data);
+        if (user.id.isEmpty) {
+          user = user.copyWith(id: doc.id);
+        }
+        _userCache[userId] = user;
       }
-    } catch (e) {
-      print('Error fetching user data: $e');
-    }
+    } catch (_) {}
   }
-  
-  void _markMessagesAsRead(List<MessageModel> messages) async {
+
+  Future<void> _markMessagesAsRead() async {
     final currentUserId = _authController.currentUser.value?.id;
-    if (currentUserId == null) return;
-    
+    final chat = _groupChat.value;
+    if (currentUserId == null || chat == null) return;
     final batch = FirebaseFirestore.instance.batch();
-    bool hasUnreadMessages = false;
-    
-    for (final message in messages) {
-      if (!message.isRead && message.senderId != currentUserId) {
-        final messageRef = FirebaseFirestore.instance
-            .collection('messages')
-            .doc(message.id);
-        
-        batch.update(messageRef, {'isRead': true});
-        hasUnreadMessages = true;
+
+    for (final m in _messages) {
+      if (!m.isRead && m.senderId != currentUserId) {
+        final ref = FirebaseFirestore.instance.collection('messages').doc(m.id);
+        batch.update(ref, {'isRead': true});
       }
     }
-    
-    if (hasUnreadMessages) {
-      await batch.commit();
-    }
+
+    // reset my unread counter
+    final chatRef = FirebaseFirestore.instance.collection('chats').doc(chat.id);
+    batch.update(chatRef, {'unreadCount.$currentUserId': 0});
+    await batch.commit();
   }
-  
-  void _sendMessage() async {
+
+  Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
-    
+    final chat = _groupChat.value;
     final currentUser = _authController.currentUser.value;
-    if (currentUser == null) return;
-    
+    if (chat == null || currentUser == null) return;
+
     try {
-      // Clear text field first for better UX
-      _messageController.clear();
-      
-      // Create new message
-      final newMessage = {
-        'chatId': widget.chatId,
-        'senderId': currentUser.id,
-        'text': text,
-        'sentAt': DateTime.now(),
-        'isRead': false,
-        'isDelivered': false,
-      };
-      
-      // Add message to Firestore
-      await FirebaseFirestore.instance
-          .collection('messages')
-          .add(newMessage);
-      
-      // Update chat's last message data
-      final unreadCountUpdates = <String, dynamic>{};
-      for (final userId in _groupChat.value!.participants) {
-        if (userId != currentUser.id) {
-          unreadCountUpdates['unreadCount.$userId'] = FieldValue.increment(1);
-        }
-      }
-      
-      await FirebaseFirestore.instance
+      final now = DateTime.now();
+      final msgRef = FirebaseFirestore.instance.collection('messages').doc();
+      final chatRef = FirebaseFirestore.instance
           .collection('chats')
-          .doc(widget.chatId)
-          .update({
-        'lastMessageText': text,
-        'lastMessageTime': DateTime.now(),
-        'lastMessageSenderId': currentUser.id,
-        ...unreadCountUpdates,
+          .doc(chat.id);
+
+      await FirebaseFirestore.instance.runTransaction((tx) async {
+        tx.set(msgRef, {
+          'chatId': chat.id,
+          'senderId': currentUser.id,
+          'text': text,
+          'sentAt': now,
+          'isRead': false,
+          'isDelivered': true,
+          'isDeleted': false,
+          'isEdited': false,
+          'editedAt': null,
+          'deletedAt': null,
+          'metadata': {'isSystemMessage': false},
+        });
+
+        // increment unread for others
+        final updateMap = <String, dynamic>{
+          'lastMessageTime': now,
+          'lastMessageText': text,
+          'lastMessageSenderId': currentUser.id,
+        };
+        for (final uid in chat.participants) {
+          if (uid == currentUser.id) continue;
+          updateMap['unreadCount.$uid'] = FieldValue.increment(1);
+        }
+        tx.update(chatRef, updateMap);
       });
-      
-      // Scroll to bottom
+
+      _messageController.clear();
       _scrollToBottom();
     } catch (e) {
-      print('Error sending message: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to send message',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      Get.snackbar('Error', 'Failed to send message');
     }
   }
-  
+
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent + 80,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    return Scaffold(
-      appBar: _buildAppBar(isDarkMode),
-      body: Obx(() => _isLoading.value 
-        ? const Center(child: CircularProgressIndicator())
-        : _buildChatUI(isDarkMode)
-      ),
-    );
-  }
-  
-  PreferredSizeWidget _buildAppBar(bool isDarkMode) {
-    return AppBar(
-      title: Obx(() {
-        if (_isLoading.value || _groupChat.value == null) {
-          return const Text('Group Chat');
-        }
-        
-        final groupName = (_groupChat.value?.toMap()['groupName'] as String?) ?? 'Group Chat';
-        
-        return Row(
-          children: [
-            // Group avatar with random color
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(
-                  (widget.chatId.hashCode & 0xFFFFFF) | 0xFF000000,
-                ).withOpacity(0.2),
-                border: Border.all(
-                  color: Color((widget.chatId.hashCode & 0xFFFFFF) | 0xFF000000),
-                  width: 2,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  groupName.substring(0, 1).toUpperCase(),
-                  style: TextStyle(
-                    color: Color((widget.chatId.hashCode & 0xFFFFFF) | 0xFF000000),
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+    return Obx(() {
+      if (_isLoading.value) {
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
+      final chat = _groupChat.value;
+      if (chat == null) {
+        return const Scaffold(
+          body: Center(child: Text('Group chat not found')),
+        );
+      }
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(chat.groupName ?? 'Group Chat'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.info_outline),
+              onPressed: _showGroupInfo,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    groupName,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+            PopupMenuButton<String>(
+              onSelected: _onMenuSelected,
+              itemBuilder: (ctx) {
+                final me = _authController.currentUser.value?.id;
+                final isAdmin = _isAdmin(me, chat);
+                final isCreator = chat.groupCreatorId == me;
+                final items = <PopupMenuEntry<String>>[];
+                if (isAdmin) {
+                  items.add(
+                    const PopupMenuItem(
+                      value: 'rename',
+                      child: Text('Rename group'),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    '${_groupChat.value!.participants.length} members',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  );
+                }
+                if (isAdmin) {
+                  items.add(
+                    const PopupMenuItem(
+                      value: 'manage',
+                      child: Text('Manage members'),
                     ),
+                  );
+                }
+                if (isCreator) {
+                  items.add(
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete group'),
+                    ),
+                  );
+                }
+                items.add(
+                  const PopupMenuItem(
+                    value: 'leave',
+                    child: Text('Leave group'),
                   ),
-                ],
-              ),
+                );
+                return items;
+              },
             ),
           ],
-        );
-      }),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.info_outline),
-          onPressed: () => _showGroupInfo(context),
         ),
-      ],
-    );
-  }
-  
-  Widget _buildChatUI(bool isDarkMode) {
-    return Column(
-      children: [
-        // Messages list
-        Expanded(
-          child: Obx(() {
-            if (_messages.isEmpty) {
-              return _buildEmptyChat();
-            }
-            
-            return ListView.builder(
-              controller: _scrollController,
-              reverse: true,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                final isCurrentUser = message.senderId == _authController.currentUser.value?.id;
-                
-                // Show date separator if needed
-                final showDateSeparator = index == _messages.length - 1 || 
-                    !_isSameDay(message.sentAt, _messages[index + 1].sentAt);
-                
-                return Column(
-                  children: [
-                    if (showDateSeparator)
-                      _buildDateSeparator(message.sentAt),
-                    _buildMessageBubble(message, isCurrentUser, isDarkMode),
-                  ],
-                );
-              },
-            );
-          }),
-        ),
-        
-        // Message input
-        _buildMessageInput(isDarkMode),
-      ],
-    );
-  }
-  
-  Widget _buildEmptyChat() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.chat_bubble_outline,
-            size: 80,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No messages yet',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Start the conversation!',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildDateSeparator(DateTime date) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(
-        children: [
-          const Expanded(child: Divider()),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              _formatDateForSeparator(date),
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
+        body: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final msg = _messages[index];
+                  final isMe =
+                      msg.senderId == _authController.currentUser.value?.id;
+                  final isSystem =
+                      (msg.metadata?['isSystemMessage'] as bool?) ?? false;
+
+                  // Date separator
+                  Widget? sep;
+                  if (index == 0 ||
+                      !_isSameDay(_messages[index - 1].sentAt, msg.sentAt)) {
+                    sep = _buildDateChip(msg.sentAt);
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (sep != null) sep,
+                      Align(
+                        alignment:
+                            isSystem
+                                ? Alignment.center
+                                : isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.75,
+                          ),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color:
+                                  isSystem
+                                      ? Colors.grey.withOpacity(0.2)
+                                      : isMe
+                                      ? Theme.of(context).colorScheme.primary
+                                      : (isDarkMode
+                                          ? Colors.grey[800]
+                                          : Colors.grey[200]),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (!isMe && !isSystem)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 4.0),
+                                    child: Text(
+                                      _userCache[msg.senderId]?.fullName ??
+                                          'User',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            isDarkMode
+                                                ? Colors.grey[300]
+                                                : Colors.grey[700],
+                                      ),
+                                    ),
+                                  ),
+                                Text(
+                                  msg.text,
+                                  style: TextStyle(
+                                    color:
+                                        isSystem
+                                            ? (isDarkMode
+                                                ? Colors.grey[300]
+                                                : Colors.grey[700])
+                                            : isMe
+                                            ? Colors.white
+                                            : (isDarkMode
+                                                ? Colors.white
+                                                : Colors.black87),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Align(
+                                  alignment: Alignment.bottomRight,
+                                  child: Text(
+                                    _formatTime(msg.sentAt),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color:
+                                          isSystem
+                                              ? (isDarkMode
+                                                  ? Colors.grey[400]
+                                                  : Colors.grey[600])
+                                              : (isMe
+                                                  ? Colors.white70
+                                                  : (isDarkMode
+                                                      ? Colors.grey[400]
+                                                      : Colors.grey[600])),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
-          ),
-          const Expanded(child: Divider()),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildMessageBubble(MessageModel message, bool isCurrentUser, bool isDarkMode) {
-    final sender = _userCache[message.senderId];
-    final isSystemMessage = (message.metadata?['isSystemMessage'] as bool?) ?? false;
-    
-    // System messages are centered
-    if (isSystemMessage) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Text(
-              message.text,
-              style: TextStyle(
-                fontSize: 12,
-                color: isDarkMode ? Colors.white70 : Colors.black87,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ),
+            _buildInputBar(isDarkMode),
+          ],
         ),
       );
-    }
-    
+    });
+  }
+
+  Widget _buildDateChip(DateTime date) {
+    final text = _formatDateLong(date);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: isCurrentUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // Show avatar for other users
-          if (!isCurrentUser) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundImage: sender != null
-                  ? NetworkImage(sender.profilePicUrl)
-                  : null,
-              child: sender == null ? const Icon(Icons.person, size: 16) : null,
-            ),
-            const SizedBox(width: 8),
-          ],
-          
-          // Message bubble
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.7,
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: isCurrentUser
-                    ? Theme.of(context).colorScheme.primary
-                    : isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                borderRadius: BorderRadius.circular(20).copyWith(
-                  bottomLeft: isCurrentUser ? const Radius.circular(20) : const Radius.circular(0),
-                  bottomRight: isCurrentUser ? const Radius.circular(0) : const Radius.circular(20),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Show sender name for group chats (if not current user)
-                  if (!isCurrentUser && sender != null) ...[
-                    Text(
-                      sender.fullName,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isCurrentUser
-                            ? Colors.white70
-                            : Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                  ],
-                  
-                  // Message text
-                  Text(
-                    message.text,
-                    style: TextStyle(
-                      color: isCurrentUser
-                          ? Colors.white
-                          : isDarkMode ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  
-                  // Time and read status
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        _formatTime(message.sentAt),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isCurrentUser
-                              ? Colors.white70
-                              : Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      if (isCurrentUser)
-                        Icon(
-                          message.isRead ? Icons.done_all : Icons.done,
-                          size: 12,
-                          color: message.isRead ? Colors.blue[300] : Colors.white70,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(16),
           ),
-          
-          // Show avatar for current user (at the end)
-          if (isCurrentUser) ...[
-            const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 16,
-              backgroundImage: _authController.currentUser.value?.profilePicUrl != null
-                  ? NetworkImage(_authController.currentUser.value!.profilePicUrl)
-                  : null,
-              child: _authController.currentUser.value?.profilePicUrl == null
-                  ? const Icon(Icons.person, size: 16)
-                  : null,
-            ),
-          ],
-        ],
+          child: Text(text, style: const TextStyle(fontSize: 12)),
+        ),
       ),
     );
   }
-  
-  Widget _buildMessageInput(bool isDarkMode) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[900] : Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: SafeArea(
+
+  Widget _buildInputBar(bool isDarkMode) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
         child: Row(
           children: [
-            // Attach button
-            IconButton(
-              icon: const Icon(Icons.attach_file),
-              onPressed: () {
-                // Show attachment options
-                _showAttachmentOptions(context);
-              },
-            ),
-            
-            // Message text field
             Expanded(
               child: TextField(
                 controller: _messageController,
+                minLines: 1,
+                maxLines: 5,
                 decoration: InputDecoration(
-                  hintText: 'Type a message...',
+                  hintText: 'Message',
+                  filled: true,
+                  fillColor: isDarkMode ? Colors.grey[850] : Colors.grey[100],
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(20),
                     borderSide: BorderSide.none,
                   ),
-                  filled: true,
-                  fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
                   contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+                    horizontal: 12,
+                    vertical: 10,
                   ),
                 ),
-                textCapitalization: TextCapitalization.sentences,
-                keyboardType: TextInputType.multiline,
-                maxLines: null,
-                textInputAction: TextInputAction.newline,
               ),
             ),
-            
-            // Send button with animation
-            ScaleTransition(
-              scale: _sendButtonAnim,
-              child: IconButton(
-                icon: const Icon(Icons.send),
-                color: Theme.of(context).colorScheme.primary,
-                onPressed: _sendMessage,
-              ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _sendMessage,
+              icon: const Icon(Icons.send_rounded),
+              color: Theme.of(context).colorScheme.primary,
             ),
           ],
         ),
       ),
     );
   }
-  
-  void _showGroupInfo(BuildContext context) {
-    if (_groupChat.value == null) return;
-    
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final groupName = (_groupChat.value?.toMap()['groupName'] as String?) ?? 'Group Chat';
-    
+
+  void _showGroupInfo() {
+    final chat = _groupChat.value;
+    if (chat == null) return;
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, scrollController) {
-          return Container(
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.grey[900] : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Handle bar
-                Container(
-                  margin: const EdgeInsets.only(top: 10),
-                  height: 4,
-                  width: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
+                Text(
+                  chat.groupName ?? 'Group',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                
-                // Group info header
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      // Group avatar
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Color((widget.chatId.hashCode & 0xFFFFFF) | 0xFF000000)
-                              .withOpacity(0.2),
-                          border: Border.all(
-                            color: Color((widget.chatId.hashCode & 0xFFFFFF) | 0xFF000000),
-                            width: 3,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            groupName.substring(0, 1).toUpperCase(),
-                            style: TextStyle(
-                              color: Color((widget.chatId.hashCode & 0xFFFFFF) | 0xFF000000),
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Members',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                ...chat.participants.map((uid) {
+                  final u = _userCache[uid];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      child: Text(
+                        (u?.fullName ?? 'U').substring(0, 1).toUpperCase(),
                       ),
-                      const SizedBox(height: 16),
-                      
-                      // Group name
-                      Text(
-                        groupName,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      
-                      // Group created info
-                      Text(
-                        'Created on ${_formatDateLong(_groupChat.value!.createdAt)}',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      
-                      // Member count
-                      Text(
-                        '${_groupChat.value!.participants.length} members',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                    ),
+                    title: Text(u?.fullName ?? 'User'),
+                    subtitle: Text(u?.email ?? ''),
+                  );
+                }),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    icon: const Icon(Icons.close),
+                    label: const Text('Close'),
                   ),
                 ),
-                
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  bool _isAdmin(String? userId, ChatModel chat) {
+    if (userId == null) return false;
+    return chat.groupAdmins.contains(userId) || chat.groupCreatorId == userId;
+  }
+
+  void _onMenuSelected(String key) {
+    switch (key) {
+      case 'rename':
+        _renameGroup();
+        break;
+      case 'manage':
+        _manageMembers();
+        break;
+      case 'leave':
+        _leaveGroup();
+        break;
+      case 'delete':
+        _deleteGroup();
+        break;
+    }
+  }
+
+  Future<void> _renameGroup() async {
+    final chat = _groupChat.value;
+    final me = _authController.currentUser.value?.id;
+    if (chat == null || !_isAdmin(me, chat)) return;
+    final controller = TextEditingController(text: chat.groupName ?? '');
+    final name = await showDialog<String>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Rename group'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(hintText: 'Group name'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+    );
+    if (name == null || name.isEmpty) return;
+    try {
+      await FirebaseFirestore.instance.collection('chats').doc(chat.id).update({
+        'groupName': name,
+      });
+      Get.snackbar('Updated', 'Group renamed');
+    } catch (_) {
+      Get.snackbar('Error', 'Failed to rename group');
+    }
+  }
+
+  Future<void> _manageMembers() async {
+    final chat = _groupChat.value;
+    final me = _authController.currentUser.value?.id;
+    if (chat == null || !_isAdmin(me, chat)) return;
+
+    // Load all member user models
+    final members = <UserModel>[];
+    for (final id in chat.participants) {
+      if (_userCache.containsKey(id)) {
+        members.add(_userCache[id]!);
+      } else {
+        final doc =
+            await FirebaseFirestore.instance.collection('users').doc(id).get();
+        if (doc.exists) {
+          final u = UserModel.fromMap(doc.data()!);
+          members.add(u);
+          _userCache[id] = u;
+        }
+      }
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.7,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          builder: (_, controller) {
+            return Column(
+              children: [
+                const SizedBox(height: 8),
+                const Text(
+                  'Manage members',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const Divider(),
-                
-                // Members list
                 Expanded(
                   child: ListView.builder(
-                    controller: scrollController,
-                    itemCount: _groupChat.value!.participants.length,
-                    itemBuilder: (context, index) {
-                      final userId = _groupChat.value!.participants[index];
-                      final user = _userCache[userId];
-                      final isAdmin = userId == _groupChat.value!.toMap()['groupCreatorId'];
-                      
+                    controller: controller,
+                    itemCount: members.length,
+                    itemBuilder: (c, i) {
+                      final u = members[i];
+                      final isAdmin =
+                          chat.groupAdmins.contains(u.id) ||
+                          chat.groupCreatorId == u.id;
+                      final isMe = u.id == me;
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundImage: user?.profilePicUrl != null
-                              ? NetworkImage(user!.profilePicUrl)
-                              : null,
-                          child: user?.profilePicUrl == null
-                              ? const Icon(Icons.person)
-                              : null,
+                          child: Text(
+                            u.fullName.isNotEmpty
+                                ? u.fullName[0].toUpperCase()
+                                : 'U',
+                          ),
                         ),
-                        title: Row(
+                        title: Text(u.fullName),
+                        subtitle: Text(isAdmin ? 'Admin' : 'Member'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              user?.fullName ?? 'Loading...',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
+                            if (!isMe && me == chat.groupCreatorId)
+                              IconButton(
+                                icon: Icon(
+                                  isAdmin
+                                      ? Icons.person_remove_alt_1
+                                      : Icons.person_add_alt_1,
+                                ),
+                                tooltip:
+                                    isAdmin
+                                        ? 'Demote from admin'
+                                        : 'Make admin',
+                                onPressed: () async {
+                                  await _toggleAdmin(u.id, add: !isAdmin);
+                                  Navigator.pop(ctx);
+                                },
                               ),
-                            ),
-                            if (isAdmin) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  'Admin',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Theme.of(context).colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                            if (!isMe)
+                              IconButton(
+                                icon: const Icon(Icons.remove_circle_outline),
+                                tooltip: 'Remove from group',
+                                onPressed: () async {
+                                  await _removeMember(u.id);
+                                  Navigator.pop(ctx);
+                                },
                               ),
-                            ],
                           ],
                         ),
-                        subtitle: Text(user?.email ?? ''),
-                        trailing: userId == _authController.currentUser.value?.id
-                            ? const Text('You')
-                            : null,
                       );
                     },
                   ),
                 ),
-                
-                // Actions
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildActionButton(
-                        icon: Icons.exit_to_app,
-                        label: 'Leave Group',
-                        color: Colors.red,
-                        onTap: () => _leaveGroup(),
-                      ),
-                      if (_groupChat.value!.toMap()['groupCreatorId'] == 
-                          _authController.currentUser.value?.id)
-                        _buildActionButton(
-                          icon: Icons.edit,
-                          label: 'Edit Group',
-                          color: Theme.of(context).colorScheme.primary,
-                          onTap: () => _editGroup(context),
-                        ),
-                    ],
-                  ),
-                ),
               ],
-            ),
-          );
-        },
-      ),
+            );
+          },
+        );
+      },
     );
   }
-  
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  void _showAttachmentOptions(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: isDarkMode ? Colors.grey[900] : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Share Content',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildAttachmentOption(
-                  icon: Icons.image,
-                  label: 'Gallery',
-                  color: Colors.green,
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Implement image picker
-                  },
-                ),
-                _buildAttachmentOption(
-                  icon: Icons.camera_alt,
-                  label: 'Camera',
-                  color: Colors.blue,
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Implement camera
-                  },
-                ),
-                _buildAttachmentOption(
-                  icon: Icons.insert_drive_file,
-                  label: 'Document',
-                  color: Colors.orange,
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Implement document picker
-                  },
-                ),
-                _buildAttachmentOption(
-                  icon: Icons.location_on,
-                  label: 'Location',
-                  color: Colors.red,
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Implement location sharing
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildAttachmentOption({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 30,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  void _leaveGroup() {
-    // Show confirmation dialog
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Leave Group'),
-        content: const Text(
-          'Are you sure you want to leave this group? You\'ll no longer receive messages from this group.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Get.back(); // Close dialog
-              
-              try {
-                final currentUserId = _authController.currentUser.value!.id;
-                
-                // Remove user from participants
-                final updatedParticipants = _groupChat.value!.participants
-                    .where((id) => id != currentUserId)
-                    .toList();
-                
-                // Update chat document
-                await FirebaseFirestore.instance
-                    .collection('chats')
-                    .doc(widget.chatId)
-                    .update({
-                  'participants': updatedParticipants,
-                });
-                
-                // Add system message
-                await FirebaseFirestore.instance
-                    .collection('messages')
-                    .add({
-                  'chatId': widget.chatId,
-                  'senderId': currentUserId,
-                  'text': '${_authController.currentUser.value!.fullName} left the group',
-                  'sentAt': DateTime.now(),
-                  'isRead': false,
-                  'isDelivered': false,
-                  'metadata': {
-                    'isSystemMessage': true,
-                  },
-                });
-                
-                // Navigate back
-                Get.back();
-                
-              } catch (e) {
-                print('Error leaving group: $e');
-                Get.snackbar(
-                  'Error',
-                  'Failed to leave the group',
-                  snackPosition: SnackPosition.BOTTOM,
-                );
-              }
-            },
-            child: const Text(
-              'Leave',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  void _editGroup(BuildContext context) {
-    final groupName = (_groupChat.value?.toMap()['groupName'] as String?) ?? 'Group Chat';
-    final nameController = TextEditingController(text: groupName);
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Group'),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Group Name',
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final newName = nameController.text.trim();
-              if (newName.isEmpty) return;
-              
-              try {
-                await FirebaseFirestore.instance
-                    .collection('chats')
-                    .doc(widget.chatId)
-                    .update({
-                  'groupName': newName,
-                });
-                
-                // Add system message
-                await FirebaseFirestore.instance
-                    .collection('messages')
-                    .add({
-                  'chatId': widget.chatId,
-                  'senderId': _authController.currentUser.value!.id,
-                  'text': 'Group name changed to "$newName"',
-                  'sentAt': DateTime.now(),
-                  'isRead': false,
-                  'isDelivered': false,
-                  'metadata': {
-                    'isSystemMessage': true,
-                  },
-                });
-                
-                Navigator.pop(context);
-                Get.back(); // Close group info sheet
-                
-              } catch (e) {
-                print('Error updating group name: $e');
-                Get.snackbar(
-                  'Error',
-                  'Failed to update group name',
-                  snackPosition: SnackPosition.BOTTOM,
-                );
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  String _formatTime(DateTime dateTime) {
-    final hour = dateTime.hour.toString().padLeft(2, '0');
-    final minute = dateTime.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
-  
-  String _formatDateForSeparator(DateTime date) {
-    final now = DateTime.now();
-    final yesterday = DateTime(now.year, now.month, now.day - 1);
-    
-    if (date.year == now.year && date.month == now.month && date.day == now.day) {
-      return 'Today';
-    } else if (date.year == yesterday.year && 
-               date.month == yesterday.month && 
-               date.day == yesterday.day) {
-      return 'Yesterday';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
+
+  Future<void> _toggleAdmin(String userId, {required bool add}) async {
+    final chat = _groupChat.value;
+    final me = _authController.currentUser.value?.id;
+    if (chat == null || me != chat.groupCreatorId) return; // only creator
+    final ref = FirebaseFirestore.instance.collection('chats').doc(chat.id);
+    try {
+      await ref.update({
+        'groupAdmins':
+            add
+                ? FieldValue.arrayUnion([userId])
+                : FieldValue.arrayRemove([userId]),
+      });
+      Get.snackbar('Updated', add ? 'Admin added' : 'Admin removed');
+    } catch (_) {
+      Get.snackbar('Error', 'Failed to update admins');
     }
   }
-  
-  String _formatDateLong(DateTime date) {
-    final months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    
-    return '${date.day} ${months[date.month - 1]} ${date.year}';
+
+  Future<void> _removeMember(String userId) async {
+    final chat = _groupChat.value;
+    final me = _authController.currentUser.value?.id;
+    if (chat == null || !_isAdmin(me, chat)) return;
+    if (userId == chat.groupCreatorId) {
+      Get.snackbar('Not allowed', 'Creator cannot be removed');
+      return;
+    }
+    final ref = FirebaseFirestore.instance.collection('chats').doc(chat.id);
+    try {
+      await ref.update({
+        'participants': FieldValue.arrayRemove([userId]),
+        'groupAdmins': FieldValue.arrayRemove([userId]),
+        'unreadCount.$userId': FieldValue.delete(),
+      });
+      Get.snackbar('Removed', 'Member removed');
+    } catch (_) {
+      Get.snackbar('Error', 'Failed to remove member');
+    }
   }
-  
-  bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year && 
-           date1.month == date2.month && 
-           date1.day == date2.day;
+
+  Future<void> _leaveGroup() async {
+    final chat = _groupChat.value;
+    final me = _authController.currentUser.value?.id;
+    if (chat == null || me == null) return;
+    if (me == chat.groupCreatorId) {
+      Get.snackbar(
+        'Action needed',
+        'Creators must delete the group or transfer ownership',
+      );
+      return;
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Leave group?'),
+            content: const Text('You will stop receiving messages.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Leave'),
+              ),
+            ],
+          ),
+    );
+    if (ok != true) return;
+    try {
+      final ref = FirebaseFirestore.instance.collection('chats').doc(chat.id);
+      await ref.update({
+        'participants': FieldValue.arrayRemove([me]),
+        'groupAdmins': FieldValue.arrayRemove([me]),
+        'unreadCount.$me': FieldValue.delete(),
+      });
+      Get.back(); // leave screen
+      Get.snackbar('Left', 'You left the group');
+    } catch (_) {
+      Get.snackbar('Error', 'Failed to leave group');
+    }
+  }
+
+  Future<void> _deleteGroup() async {
+    final chat = _groupChat.value;
+    final me = _authController.currentUser.value?.id;
+    if (chat == null || me != chat.groupCreatorId) return; // only creator
+    final ok = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Delete group?'),
+            content: const Text('This will permanently delete all messages.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+    );
+    if (ok != true) return;
+    try {
+      final db = FirebaseFirestore.instance;
+      final chatRef = db.collection('chats').doc(chat.id);
+      // Delete messages in batches
+      final msgs =
+          await db
+              .collection('messages')
+              .where('chatId', isEqualTo: chat.id)
+              .get();
+      final batch = db.batch();
+      for (final d in msgs.docs) {
+        batch.delete(d.reference);
+      }
+      batch.delete(chatRef);
+      await batch.commit();
+      Get.back();
+      Get.snackbar('Deleted', 'Group deleted');
+    } catch (_) {
+      Get.snackbar('Error', 'Failed to delete group');
+    }
+  }
+
+  String _formatTime(DateTime dt) {
+    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final m = dt.minute.toString().padLeft(2, '0');
+    final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+    return '$h:$m $ampm';
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  String _formatDateLong(DateTime dt) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dateOnly = DateTime(dt.year, dt.month, dt.day);
+    if (dateOnly == today) return 'Today';
+    if (dateOnly == today.subtract(const Duration(days: 1))) return 'Yesterday';
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 }
