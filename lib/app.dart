@@ -51,8 +51,21 @@ class _AppState extends State<App> {
       () => GetMaterialApp(
         title: 'Chewata chat',
         themeMode: themeController.getThemeMode(),
-        theme: TAppTheme.lightTheme,
-        darkTheme: TAppTheme.darkTheme,
+
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          // For legacy code that reads Theme.of(context).primaryColor:
+          primaryColor: const Color.fromARGB(255, 23, 105, 172),
+        ),
+        darkTheme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Color.fromARGB(255, 32, 122, 196),
+            brightness: Brightness.dark,
+          ),
+          primaryColor: Color.fromARGB(255, 25, 108, 176),
+        ),
         initialRoute: '/',
         getPages: [
           GetPage(name: '/', page: () => _determineInitialScreen()),

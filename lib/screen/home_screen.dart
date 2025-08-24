@@ -2,6 +2,7 @@ import 'package:chewata/screen/chat/chat_list_screen.dart';
 import 'package:chewata/screen/chat/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:chewata/controller/auth_controller.dart';
@@ -85,7 +86,7 @@ class HomeScreen extends StatelessWidget {
               },
               icon: _buildAppBarIcon('assets/icons/dark_mode.svg', isDarkMode),
             ),
-            const SizedBox(width: 12),
+            // const SizedBox(width: 8),
             IconButton(
               onPressed: () {
                 final ChatController chatController =
@@ -99,14 +100,14 @@ class HomeScreen extends StatelessWidget {
               },
               icon: _buildAppBarIcon('assets/icons/search.svg', isDarkMode),
             ),
-            const SizedBox(width: 12),
-            IconButton(
-              onPressed: () {
-                // Your logout logic here
-                _showLogoutConfirmationDialog(context);
-              },
-              icon: _buildAppBarIcon('assets/icons/logout.svg', isDarkMode),
-            ),
+            const SizedBox(width: 8),
+            // IconButton(
+            //   onPressed: () {
+            //     // Your logout logic here
+            //     _showLogoutConfirmationDialog(context);
+            //   },
+            //   icon: _buildAppBarIcon('assets/icons/logout.svg', isDarkMode),
+            // ),
           ],
         ),
         body: PageView(
@@ -198,7 +199,19 @@ class HomeScreen extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Choose Theme'),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 0,
+          ),
+          title: Text(
+            'Choose Theme',
+
+            style: GoogleFonts.roboto(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+
           content: SizedBox(
             width: double.minPositive,
             child: GetBuilder<ThemeController>(
@@ -214,7 +227,7 @@ class HomeScreen extends StatelessWidget {
                       currentThemeMode == ThemeMode.light,
                       () => controller.setThemeMode(ThemeMode.light),
                     ),
-                    const Divider(),
+                    const Divider(height: 1),
                     _buildThemeOption(
                       context,
                       'Dark',
@@ -222,7 +235,7 @@ class HomeScreen extends StatelessWidget {
                       currentThemeMode == ThemeMode.dark,
                       () => controller.setThemeMode(ThemeMode.dark),
                     ),
-                    const Divider(),
+                    const Divider(height: 1),
                     _buildThemeOption(
                       context,
                       'System',
@@ -235,12 +248,16 @@ class HomeScreen extends StatelessWidget {
               },
             ),
           ),
+          actionsPadding: const EdgeInsets.only(right: 10, bottom: 10),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Close'),
+              child: Text(
+                'Close',
+                style: GoogleFonts.roboto(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         );
@@ -283,11 +300,19 @@ class HomeScreen extends StatelessWidget {
     VoidCallback onTap,
   ) {
     return ListTile(
-      title: Text(title),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      title: Text(
+        title,
+        style: GoogleFonts.roboto(fontWeight: FontWeight.normal, fontSize: 12),
+      ),
       leading: Icon(icon),
       trailing:
           isSelected
-              ? Icon(Icons.check, color: Theme.of(context).primaryColor)
+              ? Icon(
+                Icons.check,
+                color: Theme.of(context).primaryColor,
+                size: 16,
+              )
               : null,
       onTap: () {
         onTap();

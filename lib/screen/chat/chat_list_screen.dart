@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:chewata/controller/chat_controller.dart';
 import 'package:chewata/models/chat_model.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -39,7 +40,9 @@ class ChatListScreen extends StatelessWidget {
                 final user = chatController.searchedUser.value!;
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: Theme.of(context).primaryColor,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).primaryColor.withOpacity(0.2),
                     child: Text(
                       user.fullName.isNotEmpty
                           ? user.fullName[0].toUpperCase()
@@ -264,11 +267,11 @@ class ChatListScreen extends StatelessWidget {
         ],
       ),
       child: ListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         leading: Stack(
           children: [
             CircleAvatar(
-              radius: 28,
+              radius: 24,
               backgroundColor: Theme.of(context).primaryColor,
               backgroundImage:
                   profilePic != null && profilePic.isNotEmpty
@@ -288,13 +291,13 @@ class ChatListScreen extends StatelessWidget {
             ),
             Positioned(
               right: 0,
-              bottom: 0,
+              bottom: 5,
               child: Obx(() {
                 final isOnline =
                     chatController.userOnlineStatus[otherUserId] ?? false;
                 return Container(
-                  width: 16,
-                  height: 16,
+                  width: 10,
+                  height: 10,
                   decoration: BoxDecoration(
                     color:
                         isOnline
@@ -315,9 +318,9 @@ class ChatListScreen extends StatelessWidget {
         ),
         title: Text(
           chatName,
-          style: TextStyle(
-            fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
-            fontSize: 16,
+          style: GoogleFonts.ubuntu(
+            fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.w500,
+            fontSize: 14,
           ),
         ),
         subtitle: Column(
@@ -328,7 +331,7 @@ class ChatListScreen extends StatelessWidget {
                 chat.lastMessageText!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: GoogleFonts.ubuntu(
                   fontWeight:
                       unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
                   color:
@@ -338,7 +341,13 @@ class ChatListScreen extends StatelessWidget {
                 ),
               )
             else
-              const Text('No messages yet'),
+              Text(
+                'No messages yet',
+                style: GoogleFonts.ubuntu(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
           ],
         ),
         trailing: Column(
@@ -348,7 +357,7 @@ class ChatListScreen extends StatelessWidget {
             if (lastMessageTime != null)
               Text(
                 _formatChatTime(lastMessageTime),
-                style: TextStyle(
+                style: GoogleFonts.ubuntu(
                   fontSize: 12,
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 ),
@@ -363,9 +372,9 @@ class ChatListScreen extends StatelessWidget {
                 ),
                 child: Text(
                   unreadCount.toString(),
-                  style: const TextStyle(
+                  style: GoogleFonts.ubuntu(
                     color: Colors.white,
-                    fontSize: 12,
+                    fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
