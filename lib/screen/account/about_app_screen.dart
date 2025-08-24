@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class AboutAppScreen extends StatefulWidget {
@@ -54,7 +55,7 @@ class _AboutAppScreenState extends State<AboutAppScreen>
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('About Chewata'), elevation: 0),
+      appBar: AppBar(title:   Text('About Chewata', style: GoogleFonts.ubuntu(),), elevation: 0),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Padding(
@@ -73,14 +74,21 @@ class _AboutAppScreenState extends State<AboutAppScreen>
                       width: 120,
                       height: 120,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor,
                         shape: BoxShape.circle,
+                        color: isDarkMode ? Colors.grey[900] : Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
-                      child: Center(
-                        child: Icon(
-                          Icons.sports_soccer,
-                          size: 70,
-                          color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Image.asset(
+                          'assets/icons/app_logo.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
@@ -91,7 +99,7 @@ class _AboutAppScreenState extends State<AboutAppScreen>
               // App Name
               Text(
                 _packageInfo.appName,
-                style: TextStyle(
+                style: GoogleFonts.ubuntu(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: isDarkMode ? Colors.white : Colors.black,
@@ -122,8 +130,8 @@ class _AboutAppScreenState extends State<AboutAppScreen>
                   ],
                 ),
                 child: Text(
-                  'Chewata is a revolutionary platform designed to connect sports enthusiasts around the world. Our mission is to make sports more accessible and enjoyable for everyone.',
-                  style: TextStyle(
+                  'Chewata is a cross-platform chat and social app for sports enthusiasts and friends. Enjoy real-time 1-to-1 and group messaging, make random connections, manage privacy and notifications, and switch between light, dark, or system themes across Android, iOS, Web, and Desktop.',
+                  style: GoogleFonts.ubuntu(
                     fontSize: 16,
                     height: 1.5,
                     color: isDarkMode ? Colors.white70 : Colors.black87,
@@ -135,7 +143,7 @@ class _AboutAppScreenState extends State<AboutAppScreen>
               // Social Media
               Text(
                 'Connect With Us',
-                style: TextStyle(
+                style: GoogleFonts.ubuntu(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: isDarkMode ? Colors.white : Colors.black,
@@ -147,7 +155,7 @@ class _AboutAppScreenState extends State<AboutAppScreen>
               // Copyright
               Text(
                 '© ${DateTime.now().year} Chewata. All rights reserved.',
-                style: TextStyle(
+                style: GoogleFonts.ubuntu(
                   fontSize: 14,
                   color: isDarkMode ? Colors.white60 : Colors.black45,
                 ),
