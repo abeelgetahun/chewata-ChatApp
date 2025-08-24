@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:chewata/models/chat_model.dart';
 import 'package:chewata/models/message_model.dart';
@@ -51,8 +50,7 @@ class ChatService extends GetxService {
         );
 
         // Get the current user's showOnlineStatus
-        final currentUserShowOnlineStatus =
-            _authService.userModel.value?.showOnlineStatus ?? true;
+        // Respect privacy: if the target user hides their status, surface offline
 
         // If the target user hides their status, show them as offline with no last seen
         if (!user.showOnlineStatus) {
@@ -157,12 +155,18 @@ class ChatService extends GetxService {
               return [];
             }
 
-            return snapshot.docs.map((doc) {
-              // Add logging to help debug
-              print('Processing chat: ${doc.id}');
-              final data = doc.data() as Map<String, dynamic>;
-              return ChatModel.fromMap(data, doc.id);
-            }).toList();
+            final list =
+                snapshot.docs.map((doc) {
+                  // Add logging to help debug
+                  print('Processing chat: ${doc.id}');
+                  final data = doc.data() as Map<String, dynamic>;
+                  return ChatModel.fromMap(data, doc.id);
+                }).toList();
+
+            // Filter out chats hidden by current user
+            return list
+                .where((c) => (c.hiddenBy[currentUserId!] ?? false) == false)
+                .toList();
           } catch (e) {
             print('Error processing chat documents: $e');
             return [];
@@ -179,12 +183,93 @@ class ChatService extends GetxService {
         .snapshots()
         .map((snapshot) {
           return snapshot.docs.map((doc) {
-            return MessageModel.fromMap(
-              doc.data() as Map<String, dynamic>,
-              doc.id,
-            );
+            return MessageModel.fromMap(doc.data(), doc.id);
           }).toList();
         });
+  }
+
+  // Hide chat for the current user (soft delete from list)
+  Future<void> hideChatForUser(String chatId) async {
+    if (currentUserId == null) return;
+    await _chatsCollection.doc(chatId).set({
+      'hiddenBy': {currentUserId!: true},
+    }, SetOptions(merge: true));
+  }
+
+  // Unhide chat for the current user
+  Future<void> unhideChatForUser(String chatId) async {
+    if (currentUserId == null) return;
+    await _chatsCollection.doc(chatId).set({
+      'hiddenBy': {currentUserId!: false},
+    }, SetOptions(merge: true));
+  }
+
+  // Clear my messages from a chat (soft-delete my messages only)
+  Future<void> clearMyMessagesFromChat(String chatId) async {
+    if (currentUserId == null) return;
+    final batch = _db.batch();
+    final msgs =
+        await _chatsCollection
+            .doc(chatId)
+            .collection('messages')
+            .where('senderId', isEqualTo: currentUserId)
+            .get();
+    for (final doc in msgs.docs) {
+      batch.update(doc.reference, {
+        'isDeleted': true,
+        'text': '',
+        'deletedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+
+  // Optionally delete chat if no messages remain (hard delete)
+  Future<void> deleteChatIfEmpty(String chatId) async {
+    final messages =
+        await _chatsCollection
+            .doc(chatId)
+            .collection('messages')
+            .limit(1)
+            .get();
+    if (messages.docs.isEmpty) {
+      await _chatsCollection.doc(chatId).delete();
+    }
+  }
+
+  // Delete the entire chat for everyone (dangerous, irreversible)
+  Future<void> deleteChatForEveryone(String chatId) async {
+    if (currentUserId == null) return;
+
+    // Ensure the requester is a participant
+    final chatDoc = await _chatsCollection.doc(chatId).get();
+    if (!chatDoc.exists) return;
+    final data = chatDoc.data() as Map<String, dynamic>;
+    final participants = List<String>.from(data['participants'] ?? []);
+    if (!participants.contains(currentUserId)) {
+      throw Exception('Not authorized to delete this chat');
+    }
+
+    // Delete messages in batches to avoid batch size limits
+    const int pageSize = 300;
+    while (true) {
+      final snap =
+          await _chatsCollection
+              .doc(chatId)
+              .collection('messages')
+              .limit(pageSize)
+              .get();
+      if (snap.docs.isEmpty) break;
+
+      final batch = _db.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+
+    // Delete the chat document
+    await _chatsCollection.doc(chatId).delete();
   }
 
   // Send a message
@@ -219,7 +304,7 @@ class ChatService extends GetxService {
       );
 
       // Add message to subcollection
-      final messageRef = await _chatsCollection
+      await _chatsCollection
           .doc(chatId)
           .collection('messages')
           .add(message.toMap());
@@ -245,6 +330,74 @@ class ChatService extends GetxService {
     } catch (e) {
       print('Error sending message: $e');
       return false;
+    }
+  }
+
+  // Edit an existing message (only by sender)
+  Future<void> editMessage({
+    required String chatId,
+    required String messageId,
+    required String newText,
+  }) async {
+    if (currentUserId == null) throw Exception('Not authenticated');
+
+    final msgRef = _chatsCollection
+        .doc(chatId)
+        .collection('messages')
+        .doc(messageId);
+    final msgSnap = await msgRef.get();
+    if (!msgSnap.exists) throw Exception('Message not found');
+
+    final data = msgSnap.data() as Map<String, dynamic>;
+    if (data['senderId'] != currentUserId) {
+      throw Exception('Only the sender can edit this message');
+    }
+
+    await msgRef.update({
+      'text': newText,
+      'isEdited': true,
+      'editedAt': FieldValue.serverTimestamp(),
+    });
+
+    // If this is the last message, update chat preview
+    final chatDoc = await _chatsCollection.doc(chatId).get();
+    final chatData = chatDoc.data() as Map<String, dynamic>;
+    if ((chatData['lastMessageSenderId'] ?? '') == currentUserId) {
+      await _chatsCollection.doc(chatId).update({'lastMessageText': newText});
+    }
+  }
+
+  // Soft delete a message (only by sender)
+  Future<void> deleteMessage({
+    required String chatId,
+    required String messageId,
+  }) async {
+    if (currentUserId == null) throw Exception('Not authenticated');
+    final msgRef = _chatsCollection
+        .doc(chatId)
+        .collection('messages')
+        .doc(messageId);
+    final msgSnap = await msgRef.get();
+    if (!msgSnap.exists) return;
+
+    final data = msgSnap.data() as Map<String, dynamic>;
+    if (data['senderId'] != currentUserId) {
+      throw Exception('Only the sender can delete this message');
+    }
+
+    await msgRef.update({
+      'isDeleted': true,
+      'text': '',
+      'deletedAt': FieldValue.serverTimestamp(),
+    });
+
+    // If it was the last message, update chat preview
+    final chatDoc = await _chatsCollection.doc(chatId).get();
+    final chatData = chatDoc.data() as Map<String, dynamic>;
+    if ((chatData['lastMessageSenderId'] ?? '') == currentUserId) {
+      await _chatsCollection.doc(chatId).update({
+        'lastMessageText': 'Message deleted',
+      });
     }
   }
 
