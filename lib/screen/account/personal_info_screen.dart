@@ -1,25 +1,39 @@
-// lib/screen/account/personal_info_screen.dart
+ 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:chewata/controller/account_controller.dart';
-import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-class PersonalInfoScreen extends StatelessWidget {
+class PersonalInfoScreen extends StatefulWidget {
   const PersonalInfoScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final AccountController controller = Get.find<AccountController>();
+  State<PersonalInfoScreen> createState() => _PersonalInfoScreenState();
+}
 
-    // Make sure user data is loaded
-    if (controller.user.value == null) {
+class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
+  final AccountController controller = Get.find<AccountController>();
+
+  bool _obscureCurrent = true;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ensure user data is available once when screen opens
+    if (controller.user.value == null && !controller.isLoading.value) {
       controller.loadUserData();
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Personal Information'),
+        title:   Text('Personal Information' , style: GoogleFonts.ubuntu()),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Get.back(),
@@ -30,281 +44,274 @@ class PersonalInfoScreen extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Profile information section
-              _buildSectionTitle('Profile Information', isDarkMode),
-              const SizedBox(height: 16),
-              _buildProfileInfoSection(context, controller, isDarkMode),
+        return SafeArea(
+           child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                  _sectionCard(
+                    context: context,
+                    title: 'Profile Information',
+                    icon: Icons.person_outline,
+                    child: Column(
+                    children: [
+                      TextFormField(
+                      controller: controller.fullNameController,
+                      enabled: !controller.isUpdating.value,
+                      textInputAction: TextInputAction.next,
+                      textCapitalization: TextCapitalization.words,
+                      style: GoogleFonts.ubuntu(),
+                      decoration: _inputDecoration(
+                        context,
+                        label: 'Full Name',
+                        hint: 'Enter your full name',
+                        icon: Icons.person,
+                      ).copyWith(
+                        labelStyle: GoogleFonts.ubuntu(),
+                        hintStyle: GoogleFonts.ubuntu(),
+                      ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                      controller: controller.birthDateController,
+                      readOnly: true,
+                      onTap: () => _selectDate(context, controller),
+                      style: GoogleFonts.ubuntu(),
+                      decoration: _inputDecoration(
+                        context,
+                        label: 'Birth Date',
+                        hint: 'Select your birth date',
+                        icon: Icons.cake_outlined,
+                        suffix: const Icon(Icons.calendar_today, size: 18),
+                      ).copyWith(
+                        labelStyle: GoogleFonts.ubuntu(),
+                        hintStyle: GoogleFonts.ubuntu(),
+                      ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed:
+                          controller.isUpdating.value
+                            ? null
+                            : () => controller.updatePersonalInfo(),
+                        icon:
+                          controller.isUpdating.value
+                            ? SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                              theme.colorScheme.onPrimary,
+                              ),
+                            ),
+                            )
+                            : const Icon(Icons.save_outlined),
+                        label: Text('Save Changes', style: GoogleFonts.ubuntu()),
+                        style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        ),
+                      ),
+                      ),
+                    ],
+                    ),
+                  ),   const SizedBox(height: 20),
 
-              const SizedBox(height: 32),
-
-              // Password change section
-              _buildSectionTitle('Change Password', isDarkMode),
-              const SizedBox(height: 16),
-              _buildPasswordChangeSection(context, controller, isDarkMode),
-            ],
+                _sectionCard(
+                  context: context,
+                  title: 'Change Password',
+                  icon: Icons.lock_outline,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: controller.currentPasswordController,
+                        enabled: !controller.isUpdating.value,
+                        obscureText: _obscureCurrent,
+                        decoration: _inputDecoration(
+                          context,
+                          label: 'Current Password',
+                          hint: 'Enter your current password',
+                          icon: Icons.lock,
+                          suffix: IconButton(
+                            tooltip:
+                                _obscureCurrent
+                                    ? 'Show password'
+                                    : 'Hide password',
+                            icon: Icon(
+                              _obscureCurrent
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed:
+                                () => setState(() {
+                                  _obscureCurrent = !_obscureCurrent;
+                                }),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: controller.newPasswordController,
+                        enabled: !controller.isUpdating.value,
+                        obscureText: _obscureNew,
+                        decoration: _inputDecoration(
+                          context,
+                          label: 'New Password',
+                          hint: 'Enter your new password',
+                          icon: Icons.lock_outline,
+                          suffix: IconButton(
+                            tooltip:
+                                _obscureNew ? 'Show password' : 'Hide password',
+                            icon: Icon(
+                              _obscureNew
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed:
+                                () => setState(() {
+                                  _obscureNew = !_obscureNew;
+                                }),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: controller.confirmPasswordController,
+                        enabled: !controller.isUpdating.value,
+                        obscureText: _obscureConfirm,
+                        decoration: _inputDecoration(
+                          context,
+                          label: 'Confirm New Password',
+                          hint: 'Re-enter your new password',
+                          icon: Icons.lock_reset,
+                          suffix: IconButton(
+                            tooltip:
+                                _obscureConfirm
+                                    ? 'Show password'
+                                    : 'Hide password',
+                            icon: Icon(
+                              _obscureConfirm
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed:
+                                () => setState(() {
+                                  _obscureConfirm = !_obscureConfirm;
+                                }),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed:
+                              controller.isUpdating.value
+                                  ? null
+                                  : () => controller.updatePassword(),
+                          icon:
+                              controller.isUpdating.value
+                                  ? SizedBox(
+                                    height: 18,
+                                    width: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        theme.colorScheme.onPrimary,
+                                      ),
+                                    ),
+                                  )
+                                  : const Icon(Icons.password_outlined),
+                          label: const Text('Change Password'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       }),
     );
   }
 
-  Widget _buildSectionTitle(String title, bool isDarkMode) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: isDarkMode ? Colors.white : Colors.black,
-      ),
-    );
-  }
-
-  Widget _buildProfileInfoSection(
-    BuildContext context,
-    AccountController controller,
-    bool isDarkMode,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[850] : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Full Name Field
-          _buildTextField(
-            label: 'Full Name',
-            controller: controller.fullNameController,
-            hint: 'Enter your full name',
-            icon: Icons.person,
-            isDarkMode: isDarkMode,
-          ),
-
-          const SizedBox(height: 16),
-
-          // Birth Date Field
-          GestureDetector(
-            onTap: () => _selectDate(context, controller),
-            child: AbsorbPointer(
-              child: _buildTextField(
-                label: 'Birth Date',
-                controller: controller.birthDateController,
-                hint: 'Select your birth date',
-                icon: Icons.calendar_today,
-                isDarkMode: isDarkMode,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Save Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed:
-                  controller.isUpdating.value
-                      ? null
-                      : () => controller.updatePersonalInfo(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child:
-                  controller.isUpdating.value
-                      ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                      : const Text(
-                        'Save Changes',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPasswordChangeSection(
-    BuildContext context,
-    AccountController controller,
-    bool isDarkMode,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[850] : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Current Password Field
-          _buildTextField(
-            label: 'Current Password',
-            controller: controller.currentPasswordController,
-            hint: 'Enter your current password',
-            icon: Icons.lock,
-            isDarkMode: isDarkMode,
-            isPassword: true,
-          ),
-
-          const SizedBox(height: 16),
-
-          // New Password Field
-          _buildTextField(
-            label: 'New Password',
-            controller: controller.newPasswordController,
-            hint: 'Enter your new password',
-            icon: Icons.lock_outline,
-            isDarkMode: isDarkMode,
-            isPassword: true,
-          ),
-
-          const SizedBox(height: 16),
-
-          // Confirm Password Field
-          _buildTextField(
-            label: 'Confirm New Password',
-            controller: controller.confirmPasswordController,
-            hint: 'Confirm your new password',
-            icon: Icons.lock_reset,
-            isDarkMode: isDarkMode,
-            isPassword: true,
-          ),
-
-          const SizedBox(height: 24),
-
-          // Change Password Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed:
-                  controller.isUpdating.value
-                      ? null
-                      : () => controller.updatePassword(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child:
-                  controller.isUpdating.value
-                      ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                      : const Text(
-                        'Change Password',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTextField({
+  // Shared input decoration to keep a consistent look
+  InputDecoration _inputDecoration(
+    BuildContext context, {
     required String label,
-    required TextEditingController controller,
     required String hint,
     required IconData icon,
-    required bool isDarkMode,
-    bool isPassword = false,
+    Widget? suffix,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
-          ),
+    final theme = Theme.of(context);
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      prefixIcon: Icon(icon),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: theme.colorScheme.surface.withOpacity(0.3),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.4)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+  }
+
+  Widget _sectionCard({
+    required BuildContext context,
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0.5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(icon, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            child,
+          ],
         ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          obscureText: isPassword,
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixIcon: Icon(icon),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: Theme.of(Get.context!).primaryColor,
-                width: 2,
-              ),
-            ),
-            filled: true,
-            fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[100],
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -321,22 +328,19 @@ class PersonalInfoScreen extends StatelessWidget {
       context: context,
       initialDate: initialDate,
       firstDate: DateTime(1900),
-      lastDate: DateTime(
-        now.year - 13,
-        now.month,
-        now.day,
-      ), // Minimum age 13 years
+      lastDate: DateTime(now.year - 13, now.month, now.day), // Min age 13
       builder: (context, child) {
+        final theme = Theme.of(context);
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Theme.of(context).primaryColor,
-              onPrimary: Colors.white,
-              onSurface: Theme.of(context).textTheme.bodyLarge!.color!,
+          data: theme.copyWith(
+            colorScheme: theme.colorScheme.copyWith(
+              primary: theme.colorScheme.primary,
+              onPrimary: theme.colorScheme.onPrimary,
+              onSurface: theme.colorScheme.onSurface,
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).primaryColor,
+                foregroundColor: theme.colorScheme.primary,
               ),
             ),
           ),

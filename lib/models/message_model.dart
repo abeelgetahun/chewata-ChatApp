@@ -1,4 +1,3 @@
- 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MessageModel {
@@ -55,19 +54,34 @@ class MessageModel {
       return null;
     }
 
+    bool _toBool(dynamic v) {
+      if (v is bool) return v;
+      if (v is int) return v != 0;
+      if (v is String) return v.toLowerCase() == 'true';
+      return false;
+    }
+
+    // Be forgiving about legacy data that may store dates as strings or DateTime
+    final DateTime? sentAt = _tsToDate(
+      map['sentAt'] ?? map['createdAt'] ?? map['timestamp'],
+    );
+
     return MessageModel(
       id: documentId,
-      chatId: map['chatId'] ?? '',
-      senderId: map['senderId'] ?? '',
-      text: map['text'] ?? '',
-      sentAt: (map['sentAt'] as Timestamp).toDate(),
-      isRead: map['isRead'] ?? false,
-      isDelivered: map['isDelivered'] ?? false,
-      isDeleted: map['isDeleted'] ?? false,
-      isEdited: map['isEdited'] ?? false,
+      chatId: (map['chatId'] ?? '').toString(),
+      senderId: (map['senderId'] ?? '').toString(),
+      text: (map['text'] ?? '').toString(),
+      sentAt: sentAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+      isRead: _toBool(map['isRead']),
+      isDelivered: _toBool(map['isDelivered']),
+      isDeleted: _toBool(map['isDeleted']),
+      isEdited: _toBool(map['isEdited']),
       editedAt: _tsToDate(map['editedAt']),
       deletedAt: _tsToDate(map['deletedAt']),
-      metadata: map['metadata'],
+      metadata:
+          map['metadata'] is Map<String, dynamic>
+              ? Map<String, dynamic>.from(map['metadata'])
+              : null,
     );
   }
 }
