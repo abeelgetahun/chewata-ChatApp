@@ -203,10 +203,8 @@ class ChatController extends GetxController {
     selectedChatId.value = chatId;
 
     // Get the chat to find the other user's ID
-    final chat = userChats.firstWhere(
-      (c) => c.id == chatId,
-      orElse: () => null as dynamic,
-    );
+    final matches = userChats.where((c) => c.id == chatId).toList();
+    final ChatModel? chat = matches.isNotEmpty ? matches.first : null;
 
     if (chat != null) {
       final otherUserId = chat.participants.firstWhere(
@@ -247,6 +245,31 @@ class ChatController extends GetxController {
     selectedChatId.value = '';
     currentChatMessages.clear();
     searchedUser.value = null; // Also clear search state
+  }
+
+  // Hide chat from current user's list
+  Future<void> hideChat(String chatId) async {
+    await ChatService.instance.hideChatForUser(chatId);
+  }
+
+  // Unhide chat (not exposed in UI yet)
+  Future<void> unhideChat(String chatId) async {
+    await ChatService.instance.unhideChatForUser(chatId);
+  }
+
+  // Clear only my messages in a chat
+  Future<void> clearMyMessages(String chatId) async {
+    await ChatService.instance.clearMyMessagesFromChat(chatId);
+  }
+
+  // Delete the entire chat for everyone
+  Future<void> deleteChatForEveryone(String chatId) async {
+    await ChatService.instance.deleteChatForEveryone(chatId);
+    // Remove locally if present
+    userChats.removeWhere((c) => c.id == chatId);
+    if (selectedChatId.value == chatId) {
+      clearSelectedChat();
+    }
   }
 
   // Add to ChatController class
@@ -336,10 +359,8 @@ class ChatController extends GetxController {
     selectedChatId.value = chatId;
 
     // Get the chat to find the other user's ID
-    final chat = userChats.firstWhere(
-      (c) => c.id == chatId,
-      orElse: () => null as dynamic,
-    );
+    final matches = userChats.where((c) => c.id == chatId).toList();
+    final ChatModel? chat = matches.isNotEmpty ? matches.first : null;
 
     if (chat != null) {
       final otherUserId = chat.participants.firstWhere(
@@ -394,6 +415,10 @@ class ChatController extends GetxController {
     if (selectedChatId.value.isNotEmpty) {
       _chatService.markChatAsRead(selectedChatId.value);
     }
+  }
+
+  Future<void> markChatAsRead(String chatId) async {
+    await _chatService.markChatAsRead(chatId);
   }
 
   // Use this in the UI to determine if we should show the online indicator
@@ -451,5 +476,55 @@ class ChatController extends GetxController {
       // Format as date for older timestamps
       return "${lastSeen.day}/${lastSeen.month}/${lastSeen.year}";
     }
+  }
+
+  // Edit a message
+  Future<void> editMessage(
+    String chatId,
+    String messageId,
+    String newText,
+  ) async {
+    await _chatService.editMessage(
+      chatId: chatId,
+      messageId: messageId,
+      newText: newText.trim(),
+    );
+  }
+
+  // Delete a message (soft delete)
+  Future<void> deleteMessage(String chatId, String messageId) async {
+    await _chatService.deleteMessage(chatId: chatId, messageId: messageId);
+  }
+
+  // Clear all messages in a chat for both users (dangerous). Here we just mark all as deleted.
+  Future<void> clearChat(String chatId) async {
+    // Mark all messages as deleted for a chat
+    try {
+      final messages =
+          await ChatService.instance
+              .getChatMessages(chatId)
+              .first; // one-time read
+      for (final m in messages) {
+        if (m.senderId == currentUser?.id) {
+          await deleteMessage(chatId, m.id);
+        }
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to clear chat');
+    }
+  }
+
+  // Get other user's model for a chat
+  UserModel? getOtherUser(String chatId) {
+    final matches = userChats.where((c) => c.id == chatId).toList();
+    if (matches.isEmpty) return null;
+    final chat = matches.first;
+    final currentId = _authService.userModel.value?.id;
+    final otherId = chat.participants.firstWhere(
+      (id) => id != currentId,
+      orElse: () => '',
+    );
+    if (otherId.isEmpty) return null;
+    return chatUsers[otherId];
   }
 }

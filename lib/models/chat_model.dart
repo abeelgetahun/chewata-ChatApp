@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatModel {
@@ -9,6 +8,7 @@ class ChatModel {
   final String? lastMessageText;
   final String? lastMessageSenderId;
   final Map<String, int> unreadCount; // Map of userId -> unread count
+  final Map<String, bool> hiddenBy; // Map of userId -> hidden
 
   ChatModel({
     required this.id,
@@ -18,6 +18,7 @@ class ChatModel {
     this.lastMessageText,
     this.lastMessageSenderId,
     required this.unreadCount,
+    this.hiddenBy = const {},
   });
 
   Map<String, dynamic> toMap() {
@@ -28,6 +29,7 @@ class ChatModel {
       'lastMessageText': lastMessageText,
       'lastMessageSenderId': lastMessageSenderId,
       'unreadCount': unreadCount,
+      'hiddenBy': hiddenBy,
     };
   }
 
@@ -37,12 +39,14 @@ class ChatModel {
         id: documentId,
         participants: List<String>.from(map['participants'] ?? []),
         createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-        lastMessageTime: map['lastMessageTime'] != null 
-            ? (map['lastMessageTime'] as Timestamp).toDate() 
-            : null,
+        lastMessageTime:
+            map['lastMessageTime'] != null
+                ? (map['lastMessageTime'] as Timestamp).toDate()
+                : null,
         lastMessageText: map['lastMessageText'],
         lastMessageSenderId: map['lastMessageSenderId'],
         unreadCount: Map<String, int>.from(map['unreadCount'] ?? {}),
+        hiddenBy: Map<String, bool>.from(map['hiddenBy'] ?? {}),
       );
     } catch (e) {
       print('Error parsing ChatModel from map: $e');
