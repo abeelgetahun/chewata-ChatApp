@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:chewata/controller/auth_controller.dart';
+import 'package:flutter/services.dart';
 import 'package:chewata/controller/navigation_controller.dart';
 import 'package:chewata/controller/theme_controller.dart';
 import 'package:chewata/controller/chat_controller.dart';
@@ -23,7 +23,7 @@ class HomeScreen extends StatelessWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     // Initialize controllers
-    final AuthController authController = Get.find<AuthController>();
+    // Auth controller is available via GetX if needed later
     final AuthService authService = Get.find<AuthService>();
     final ThemeController themeController = Get.find<ThemeController>();
 
@@ -69,6 +69,14 @@ class HomeScreen extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: Colors.transparent, // Transparent app bar
           elevation: 0, // Remove shadow
+          systemOverlayStyle:
+              isDarkMode
+                  ? SystemUiOverlayStyle.light.copyWith(
+                    statusBarColor: Colors.transparent,
+                  )
+                  : SystemUiOverlayStyle.dark.copyWith(
+                    statusBarColor: Colors.transparent,
+                  ),
           title: const Text(
             'Chewata',
             style: TextStyle(
@@ -265,32 +273,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _showLogoutConfirmationDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Are you sure you want to logout?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-                AuthService.instance.logout(); // Call the logout method
-              },
-              child: const Text('Logout'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // Logout dialog was unused; re-add if needed in the future
 
   Widget _buildThemeOption(
     BuildContext context,
