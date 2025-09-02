@@ -5,7 +5,7 @@ Chewata is a modern, cross‑platform chat and social app built with Flutter. It
 
 
 ## Demo account (quick test) 🔑
-- Email: abel@gmai.com
+- Email: abel@gmail.com
 - Password: 123456
 
 If this account isn’t available in your Firebase project, create it in Firebase Authentication (Email/Password) or sign up in the app once and then reuse the credentials.
